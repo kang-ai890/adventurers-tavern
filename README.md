@@ -28,25 +28,31 @@ adventurers-tavern/
 └── docs/             # 设计文档、素材署名
 ```
 
-## 本地开发
+## 本地开发（零安装数据库，开箱即玩）
 
 ```bash
 # 1. 安装依赖（需要 Node >= 20）
 npm install
 
-# 2. 准备数据库（本地 PostgreSQL 或 Neon 免费实例）
-#    复制 apps/server/.env.example 为 apps/server/.env，填入 DATABASE_URL
-npm run db:generate
+# 2. 启动本地数据库（嵌入式 PostgreSQL，数据在 .pgdata，无需安装任何软件）
+npm run db:local
 
-# 3. 启动后端（http://localhost:4000）
+# 3. 首次运行：建表（apps/server/.env 已配好本地连接串）
+npm run db:deploy
+
+# 4. 另开终端启动后端（http://localhost:4000）
 npm run dev:server
 
-# 4. 另开终端启动前端（http://localhost:5173）
+# 5. 另开终端启动前端（http://localhost:5173，浏览器打开即可玩）
 npm run dev:web
 
-# 5. 管理后台（http://localhost:5174）
+# 6. 管理后台（http://localhost:5174）
 npm run dev:admin
 ```
+
+**自动化测试**：`npm run test:e2e`（需先启动本地数据库和后端，覆盖"登录→种植→收获→出售→升级守卫"全流程）。
+
+> 本地库为嵌入式 PGlite（单会话复用），连接串需带 `pgbouncer=true&connection_limit=1`（apps/server/.env 已配置）；生产环境（Neon）用标准连接串。
 
 ## 部署（全部免费）
 

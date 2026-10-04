@@ -1,0 +1,328 @@
+import { Router } from "express";
+import { prisma } from "@tavern/database";
+import {
+  FARM_BUILDING,
+  GuestLoginSchema,
+  PlantSchema,
+  HarvestSchema,
+  SellSchema,
+  UpgradeBuildingSchema,
+  cropCanPlantInSeason,
+  currentSeason,
+  expToNext,
+  getCrop,
+  realmOfLevel,
+  type BuildingDto,
+  type FarmPlotDto,
+  type FarmStateDto,
+  type HarvestResultDto,
+  type PlantResultDto,
+  type SellResultDto,
+  type UpgradeResultDto,
+} from "@tavern/shared";
+import { authRequired, getPlayerOrThrow, guestLogin, publicPlayer, type AuthedRequest } from "./auth.js";
+
+export const apiRouter = Router();
+
+/** 通用异步错误包装 */
+function wrap(handler: (req: AuthedRequest, res: import("express").Response) => Promise<void>) {
+  return (req: import("express").Request, res: import("express").Response) => {
+    handler(req as AuthedRequest, res).catch((err: Error & { status?: number }) => {
+      const status = err.status ?? 500;
+      if (status >= 500) console.error("[api]", err);
+      res.status(status).json({ error: err.message || "服务器错误" });
+    });
+  };
+}
+
+// ---------- 认证 ----------
+
+apiRouter.post("/auth/guest", wrap(async (req, res) => {
+  const body = GuestLoginSchema.parse(req.body);
+  const result = await guestLogin(body.deviceToken, body.nickname);
+  res.json(result);
+}));
+
+// ---------- 玩家 ----------
+
+apiRouter.get("/player", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(publicPlayer(player));
+}));
+
+// ---------- 领地（灵田 / 建筑 / 背包） ----------
+
+apiRouter.get("/farm", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  const farmLevel = await getFarmLevel(player.id);
+  const plotCount = FARM_BUILDING.plotsByLevel[farmLevel - 1];
+
+  const plots = await prisma.farmPlot.findMany({
+    where: { playerId: player.id, plotIndex: { lt: plotCount } },
+    orderBy: { plotIndex: "asc" },
+  });
+  const plotMap = new Map(plots.map((p) => [p.plotIndex, p]));
+
+  const plotDtos: FarmPlotDto[] = [];
+  for (let i = 0; i < plotCount; i++) {
+    const p = plotMap.get(i);
+    if (p?.cropId) {
+      const crop = getCrop(p.cropId);
+      const ready = p.readyAt !== null && p.readyAt.getTime() <= Date.now();
+      plotDtos.push({
+        plotIndex: i,
+        cropId: p.cropId,
+        cropName: crop?.name ?? p.cropId,
+        cropIcon: crop?.icon ?? "🌱",
+        plantedAt: p.plantedAt?.toISOString() ?? null,
+        readyAt: p.readyAt?.toISOString() ?? null,
+        ready,
+      });
+    } else {
+      plotDtos.push({ plotIndex: i, cropId: null, cropName: null, cropIcon: null, plantedAt: null, readyAt: null, ready: false });
+    }
+  }
+
+  const inventoryRows = await prisma.playerInventory.findMany({
+    where: { playerId: player.id, quantity: { gt: 0 } },
+    include: { item: true },
+  });
+  const inventory = inventoryRows.map((r) => ({
+    itemId: r.itemId,
+    name: r.item.name,
+    icon: r.item.icon,
+    price: r.item.basePrice,
+    quantity: r.quantity,
+  }));
+
+  const buildings: BuildingDto[] = [farmBuildingDto(farmLevel, player.level)];
+
+  const state: FarmStateDto = {
+    season: currentSeason(),
+    farmLevel,
+    plotCount,
+    plots: plotDtos,
+    buildings,
+    inventory,
+  };
+  res.json(state);
+}));
+
+apiRouter.post("/farm/plant", authRequired, wrap(async (req, res) => {
+  const body = PlantSchema.parse(req.body);
+  const player = await getPlayerOrThrow(req.userId);
+  const crop = getCrop(body.cropId);
+  if (!crop) {
+    res.status(404).json({ error: "没有这种作物" });
+    return;
+  }
+  const farmLevel = await getFarmLevel(player.id);
+  const plotCount = FARM_BUILDING.plotsByLevel[farmLevel - 1];
+  if (body.plotIndex < 0 || body.plotIndex >= plotCount) {
+    res.status(400).json({ error: "这块灵田还没开垦" });
+    return;
+  }
+  if (player.level < crop.unlockLevel) {
+    res.status(400).json({ error: `需要 ${crop.unlockLevel} 级才能种植${crop.name}` });
+    return;
+  }
+  if (!cropCanPlantInSeason(crop, currentSeason())) {
+    res.status(400).json({ error: `${crop.name}不适合在${currentSeason()}天种植` });
+    return;
+  }
+  if (player.stones < crop.seedCost) {
+    res.status(400).json({ error: "灵石不足，先去卖点收成吧" });
+    return;
+  }
+
+  const existing = await prisma.farmPlot.findUnique({
+    where: { playerId_plotIndex: { playerId: player.id, plotIndex: body.plotIndex } },
+  });
+  if (existing?.cropId) {
+    res.status(409).json({ error: "这块地已经种上了" });
+    return;
+  }
+
+  const now = new Date();
+  const readyAt = new Date(now.getTime() + crop.growMinutes * 60_000);
+  const [updated] = await prisma.$transaction([
+    prisma.player.update({
+      where: { id: player.id },
+      data: { stones: { decrement: crop.seedCost } },
+    }),
+    prisma.farmPlot.upsert({
+      where: { playerId_plotIndex: { playerId: player.id, plotIndex: body.plotIndex } },
+      create: { playerId: player.id, plotIndex: body.plotIndex, cropId: crop.id, plantedAt: now, readyAt },
+      update: { cropId: crop.id, plantedAt: now, readyAt, wateredBy: [] },
+    }),
+  ]);
+
+  const result: PlantResultDto = {
+    plotIndex: body.plotIndex,
+    cropId: crop.id,
+    cropName: crop.name,
+    seedCost: crop.seedCost,
+    stonesLeft: updated.stones,
+    readyAt: readyAt.toISOString(),
+  };
+  res.json(result);
+}));
+
+apiRouter.post("/farm/harvest", authRequired, wrap(async (req, res) => {
+  const body = HarvestSchema.parse(req.body);
+  const player = await getPlayerOrThrow(req.userId);
+
+  const plot = await prisma.farmPlot.findUnique({
+    where: { playerId_plotIndex: { playerId: player.id, plotIndex: body.plotIndex } },
+  });
+  if (!plot?.cropId || !plot.readyAt) {
+    res.status(400).json({ error: "这块地还没种东西" });
+    return;
+  }
+  if (plot.readyAt.getTime() > Date.now()) {
+    res.status(400).json({ error: "还没成熟，别拔苗助长" });
+    return;
+  }
+  const crop = getCrop(plot.cropId);
+  if (!crop) {
+    res.status(500).json({ error: "作物定义缺失" });
+    return;
+  }
+
+  // 结算：入背包 + 加经验 + 清地块
+  let exp = player.exp + crop.exp;
+  let level = player.level;
+  let levelUps = 0;
+  while (exp >= expToNext(level)) {
+    exp -= expToNext(level);
+    level += 1;
+    levelUps += 1;
+  }
+
+  await prisma.$transaction([
+    prisma.farmPlot.update({
+      where: { id: plot.id },
+      data: { cropId: null, plantedAt: null, readyAt: null, wateredBy: [] },
+    }),
+    prisma.playerInventory.upsert({
+      where: { playerId_itemId: { playerId: player.id, itemId: crop.id } },
+      create: { playerId: player.id, itemId: crop.id, quantity: crop.yieldCount },
+      update: { quantity: { increment: crop.yieldCount } },
+    }),
+    prisma.player.update({
+      where: { id: player.id },
+      data: { exp, level, realm: realmOfLevel(level) },
+    }),
+  ]);
+
+  const result: HarvestResultDto = {
+    cropId: crop.id,
+    cropName: crop.name,
+    quantity: crop.yieldCount,
+    expGained: crop.exp,
+    levelUps,
+    newLevel: level,
+    newRealm: realmOfLevel(level),
+  };
+  res.json(result);
+}));
+
+// ---------- 售卖 ----------
+
+apiRouter.post("/shop/sell", authRequired, wrap(async (req, res) => {
+  const body = SellSchema.parse(req.body);
+  const player = await getPlayerOrThrow(req.userId);
+
+  const row = await prisma.playerInventory.findUnique({
+    where: { playerId_itemId: { playerId: player.id, itemId: body.itemId } },
+    include: { item: true },
+  });
+  if (!row || row.quantity < body.quantity) {
+    res.status(400).json({ error: "背包里没这么多货" });
+    return;
+  }
+
+  const gain = row.item.basePrice * body.quantity;
+  const [updated] = await prisma.$transaction([
+    prisma.player.update({ where: { id: player.id }, data: { stones: { increment: gain } } }),
+    prisma.playerInventory.update({
+      where: { id: row.id },
+      data: { quantity: { decrement: body.quantity } },
+    }),
+  ]);
+
+  const result: SellResultDto = {
+    itemId: body.itemId,
+    quantity: body.quantity,
+    stonesGained: gain,
+    stonesLeft: updated.stones,
+  };
+  res.json(result);
+}));
+
+// ---------- 建筑升级 ----------
+
+apiRouter.post("/building/upgrade", authRequired, wrap(async (req, res) => {
+  const body = UpgradeBuildingSchema.parse(req.body);
+  const player = await getPlayerOrThrow(req.userId);
+  if (body.type !== "farm") {
+    res.status(400).json({ error: "未知建筑类型" });
+    return;
+  }
+
+  const level = await getFarmLevel(player.id);
+  if (level >= FARM_BUILDING.maxLevel) {
+    res.status(400).json({ error: "灵田已是最高等级" });
+    return;
+  }
+  const cost = FARM_BUILDING.upgradeCosts[level]; // 从 level 升到 level+1 的费用
+  const unlockLevel = FARM_BUILDING.unlockLevels[level]; // 目标等级所需角色等级
+  if (player.level < unlockLevel) {
+    res.status(400).json({ error: `需要角色 ${unlockLevel} 级才能扩建` });
+    return;
+  }
+  if (player.stones < cost) {
+    res.status(400).json({ error: `扩建需要 ${cost} 灵石` });
+    return;
+  }
+
+  const [updated] = await prisma.$transaction([
+    prisma.player.update({ where: { id: player.id }, data: { stones: { decrement: cost } } }),
+    prisma.building.upsert({
+      where: { playerId_type: { playerId: player.id, type: "farm" } },
+      create: { playerId: player.id, type: "farm", level: level + 1, x: 0, y: 0 },
+      update: { level: level + 1 },
+    }),
+  ]);
+
+  const result: UpgradeResultDto = {
+    type: "farm",
+    newLevel: level + 1,
+    cost,
+    stonesLeft: updated.stones,
+    newPlotCount: FARM_BUILDING.plotsByLevel[level],
+  };
+  res.json(result);
+}));
+
+// ---------- 工具函数 ----------
+
+async function getFarmLevel(playerId: string): Promise<number> {
+  const b = await prisma.building.findUnique({
+    where: { playerId_type: { playerId, type: "farm" } },
+  });
+  return b?.level ?? 1;
+}
+
+function farmBuildingDto(level: number, playerLevel: number): BuildingDto {
+  const isMax = level >= FARM_BUILDING.maxLevel;
+  return {
+    type: "farm",
+    name: "灵田",
+    level,
+    maxLevel: FARM_BUILDING.maxLevel,
+    upgradeCost: isMax ? null : FARM_BUILDING.upgradeCosts[level],
+    upgradeUnlockLevel: isMax ? null : FARM_BUILDING.unlockLevels[level],
+    effect: `地块 ${FARM_BUILDING.plotsByLevel[level - 1]} → ${isMax ? "-" : FARM_BUILDING.plotsByLevel[level]} 块${playerLevel < (FARM_BUILDING.unlockLevels[level] ?? 0) && !isMax ? "（等级不足）" : ""}`,
+  };
+}

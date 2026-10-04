@@ -192,3 +192,270 @@ body,
   font-size: 12px;
   color: #8a7f6a;
 }
+
+/* ---------- HUD 按钮与提示 ---------- */
+.hud-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #4a3f2a;
+  background: rgba(20, 16, 10, 0.85);
+  color: #f5e9c8;
+  cursor: pointer;
+  font-size: 13px;
+}
+.hud-btn:hover {
+  background: #3a2f1e;
+}
+.toast {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(36, 29, 18, 0.95);
+  border: 1px solid #b8860b;
+  color: #ffe9b0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 30;
+  max-width: 80vw;
+  text-align: center;
+}
+
+/* ---------- 领地面板 ---------- */
+.farm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  background: #1a150c;
+  overflow-y: auto;
+}
+.farm-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  color: #f5e9c8;
+}
+.farm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.farm-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd166;
+}
+.farm-sub {
+  margin-left: 10px;
+  font-size: 13px;
+  color: #cbb98a;
+  font-weight: normal;
+}
+.farm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.farm-section h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: #ffd166;
+}
+.farm-empty {
+  color: #8a7f6a;
+  font-size: 13px;
+  padding: 10px 0;
+}
+.plot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.plot {
+  background: #3a4d3c;
+  border: 2px solid #44583f;
+  border-radius: 8px;
+  min-height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plot-ready {
+  border-color: #ffd166;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 12px rgba(255, 209, 102, 0.55);
+  }
+}
+.plot-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+}
+.plot-icon {
+  font-size: 30px;
+}
+.plot-name {
+  font-size: 13px;
+}
+.plot-time {
+  font-size: 12px;
+  color: #cbb98a;
+}
+.plot-empty {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: #8a7f6a;
+  font-size: 15px;
+  cursor: pointer;
+}
+.plot-empty:hover {
+  color: #ffd166;
+}
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  width: auto;
+}
+.btn-plain {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #4a3f2a;
+  background: transparent;
+  color: #cbb98a;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-plain:hover {
+  color: #f5e9c8;
+}
+.building-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.farm-max {
+  color: #6fcf97;
+  font-size: 13px;
+}
+.inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.inv-icon {
+  font-size: 20px;
+}
+.inv-name {
+  font-weight: bold;
+}
+.inv-qty {
+  color: #ffd166;
+}
+.inv-price {
+  color: #cbb98a;
+  flex: 1;
+}
+.btn-sell {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #b8860b;
+  background: transparent;
+  color: #ffe9b0;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-sell:hover {
+  background: #3a2f1e;
+}
+
+/* ---------- 选种弹层 ---------- */
+.farm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 5, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+.crop-picker {
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 640px;
+  width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: center;
+}
+.crop-picker h3 {
+  color: #ffd166;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.crop-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.crop-card {
+  background: #1a150c;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  color: #f5e9c8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+}
+.crop-card:hover:not(:disabled) {
+  border-color: #b8860b;
+}
+.crop-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.crop-icon {
+  font-size: 26px;
+}
+.crop-name {
+  font-weight: bold;
+  font-size: 13px;
+}
+.crop-info {
+  color: #cbb98a;
+}
+.crop-lock-info {
+  color: #ffd166;
+}
+

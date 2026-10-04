@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ChatMessage, PlazaPlayer } from "@tavern/shared";
+import type { ChatMessage, FarmStateDto, InventoryItemDto, PlazaPlayer, PlayerDto } from "@tavern/shared";
 
 export type ConnectionStatus = "connecting" | "online" | "offline";
 
@@ -11,6 +11,13 @@ interface GameState {
   nickname: string;
   nearby: Record<string, PlazaPlayer>;
   chat: ChatMessage[];
+
+  // 阶段 1：经营核心
+  player: PlayerDto | null;
+  farm: FarmStateDto | null;
+  farmView: boolean;
+  notice: string | null; // 操作结果提示
+
   setConnection: (s: ConnectionStatus) => void;
   setServerUrl: (url: string) => void;
   setNickname: (name: string) => void;
@@ -20,6 +27,12 @@ interface GameState {
   movePlayer: (id: string, x: number, y: number, direction: PlazaPlayer["direction"]) => void;
   removePlayer: (id: string) => void;
   addChat: (msg: ChatMessage) => void;
+
+  setPlayer: (p: PlayerDto) => void;
+  setFarm: (f: FarmStateDto) => void;
+  setFarmView: (v: boolean) => void;
+  setNotice: (n: string | null) => void;
+  applyInventoryChange: (itemId: string, delta: number) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -30,6 +43,11 @@ export const useGameStore = create<GameState>((set) => ({
   nickname: "",
   nearby: {},
   chat: [],
+
+  player: null,
+  farm: null,
+  farmView: false,
+  notice: null,
 
   setConnection: (connection) => set({ connection }),
   setServerUrl: (serverUrl) => set({ serverUrl }),
@@ -59,6 +77,19 @@ export const useGameStore = create<GameState>((set) => ({
       return { nearby };
     }),
 
-  addChat: (msg) =>
-    set((s) => ({ chat: [...s.chat.slice(-49), msg] })),
+  addChat: (msg) => set((s) => ({ chat: [...s.chat.slice(-49), msg] })),
+
+  setPlayer: (player) => set({ player, nickname: player.nickname, playerId: player.id }),
+  setFarm: (farm) => set({ farm }),
+  setFarmView: (farmView) => set({ farmView }),
+  setNotice: (notice) => set({ notice }),
+
+  applyInventoryChange: (itemId, delta) =>
+    set((s) => {
+      if (!s.farm) return s;
+      const inv = s.farm.inventory.map((row: InventoryItemDto) =>
+        row.itemId === itemId ? { ...row, quantity: row.quantity + delta } : row,
+      );
+      return { farm: { ...s.farm, inventory: inv } };
+    }),
 }));

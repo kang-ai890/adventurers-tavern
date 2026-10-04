@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { Server } from "socket.io";
-import { prisma } from "@tavern/database";
+import { prisma, seedContent } from "@tavern/database";
 import {
   DEFAULTS,
   REALMS,
@@ -14,23 +14,25 @@ import {
   type ChatMessage,
 } from "@tavern/shared";
 import { env } from "./env.js";
+import { apiRouter } from "./routes.js";
 
 const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json());
 app.use("/api/", rateLimit({ windowMs: 60_000, limit: 300 }));
+app.use("/api", apiRouter);
 
 // ---------- REST ----------
 
 app.get("/api/health", async (_req, res) => {
   let db = "unknown";
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.user.count();
     db = "ok";
   } catch {
     db = "error";
   }
-  res.json({ status: "ok", db, version: "0.1.0", time: new Date().toISOString() });
+  res.json({ status: "ok", db, version: "0.2.0", time: new Date().toISOString() });
 });
 
 app.get("/api/meta", (_req, res) => {
@@ -142,10 +144,20 @@ io.on("connection", (socket) => {
 
 // ---------- 启动 ----------
 
-server.listen(env.PORT, () => {
-  console.log(`🍶 《冒险者酒馆》服务已启动 http://localhost:${env.PORT}`);
-  console.log(`   环境: ${env.NODE_ENV} · 广场每线容量: ${DEFAULTS.plazaLineCapacity}`);
-});
+async function bootstrap() {
+  try {
+    await seedContent();
+  } catch (err) {
+    console.warn("[server] 数据库初始化失败（迁移了吗？）:", err instanceof Error ? err.message : err);
+  }
+
+  server.listen(env.PORT, () => {
+    console.log(`🍶 《冒险者酒馆》服务已启动 http://localhost:${env.PORT}`);
+    console.log(`   环境: ${env.NODE_ENV} · 广场每线容量: ${DEFAULTS.plazaLineCapacity}`);
+  });
+}
+
+void bootstrap();
 
 async function shutdown() {
   console.log("[server] 正在关闭…");
