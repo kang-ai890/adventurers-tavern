@@ -82,3 +82,5 @@ jobs:
         run: node scripts/e2e-stage5.mjs
       - name: 阶段6 野外采集与PK红名
         run: node scripts/e2e-stage6.mjs
+      - name: 阶段7 签到与寻宝
+        run: node scripts/e2e-stage7.mjs

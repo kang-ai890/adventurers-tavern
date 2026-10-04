@@ -408,3 +408,28 @@ export function realmIndex(realm: string): number {
 export function bountyOf(killScore: number, realm: string): number {
   return Math.floor(killScore * BOUNTY_BASE_MULTIPLIER * (1 + BOUNTY_REALM_MULTIPLIER * realmIndex(realm)));
 }
+
+// ============================================================
+// 每日签到与寻宝罗盘
+// ============================================================
+
+/** 签到 7 天一轮（第 7 天大奖：仙玉） */
+export const CHECKIN_CYCLE = [
+  { day: 1, stones: 50, jades: 0 },
+  { day: 2, stones: 60, jades: 0 },
+  { day: 3, stones: 80, jades: 0 },
+  { day: 4, stones: 100, jades: 0 },
+  { day: 5, stones: 120, jades: 0 },
+  { day: 6, stones: 150, jades: 0 },
+  { day: 7, stones: 200, jades: 3 },
+] as const;
+
+/** 寻宝罗盘：每日免费 3 次 */
+export const TREASURE_DAILY_LIMIT = 3;
+
+export const TREASURE_POOL = [
+  { type: "stones", weight: 40, min: 20, max: 100 },
+  { type: "crop", weight: 30 },
+  { type: "material", weight: 20 },
+  { type: "jades", weight: 10, count: 1 },
+] as const;

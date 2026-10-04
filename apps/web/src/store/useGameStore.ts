@@ -26,7 +26,7 @@ interface GameState {
   farm: FarmStateDto | null;
   farmView: boolean;
   notice: string | null; // 操作结果提示
-  activePanel: "breakthrough" | "quests" | "friends" | "wild" | null;
+  activePanel: "breakthrough" | "quests" | "friends" | "wild" | "daily" | null;
   myStall: StallInfo | null; // 我自己的摊位
 
   setConnection: (s: ConnectionStatus) => void;

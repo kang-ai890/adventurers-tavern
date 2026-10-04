@@ -44,6 +44,7 @@ import {
 } from "./services/social.js";
 import { bestLine, plazaStatus, refreshStallStock, socketIdsOfPlayer } from "./services/plaza.js";
 import { attack, enterWild, gather, getWild, leaveWild } from "./services/wild.js";
+import { checkin, getDaily, treasure } from "./services/daily.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -506,6 +507,23 @@ apiRouter.post("/wild/attack", authRequired, wrap(async (req, res) => {
   const dev = env.NODE_ENV === "development";
   const force = dev && body.forceWin ? "win" : dev && body.forceLose ? "lose" : undefined;
   res.json(await attack(player, body.targetPlayerId, force));
+}));
+
+// ---------- 每日签到与寻宝 ----------
+
+apiRouter.get("/daily", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getDaily(player));
+}));
+
+apiRouter.post("/checkin", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await checkin(player));
+}));
+
+apiRouter.post("/treasure", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await treasure(player));
 }));
 
 // ---------- 工具函数 ----------

@@ -294,6 +294,34 @@ export interface AttackResultDto {
   message: string;
 }
 
+// ---------- 每日签到与寻宝 ----------
+
+export interface DailyDto {
+  checkedInToday: boolean;
+  streak: number; // 连续签到天数
+  dayOfCycle: number; // 当前轮次第几天（1~7）
+  nextReward: { day: number; stones: number; jades: number };
+  treasureLeft: number; // 今日寻宝剩余次数
+}
+
+export interface CheckinResultDto {
+  day: number;
+  streak: number;
+  rewardStones: number;
+  rewardJades: number;
+}
+
+export interface TreasureResultDto {
+  type: "stones" | "crop" | "material" | "jades";
+  text: string;
+  stonesGained: number;
+  jadesGained: number;
+  itemId: string | null;
+  itemName: string | null;
+  itemIcon: string | null;
+  itemCount: number;
+}
+
 export interface SellResultDto {
   itemId: string;
   quantity: number;

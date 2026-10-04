@@ -85,6 +85,8 @@ model Player {
   gatherLogs    GatherLog[]
   attacksMade   AttackLog[]  @relation("AttackAttacker")
   attacksTaken  AttackLog[]  @relation("AttackVictim")
+  checkins      CheckinLog[]
+  treasures     TreasureLog[]
 
   @@index([level])
   @@index([realm])
@@ -209,6 +211,36 @@ model AttackLog {
 
   @@index([attackerId, createdAt])
   @@index([victimId, createdAt])
+}
+
+// ---------- 每日签到 ----------
+
+model CheckinLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  playerId     String   @db.Uuid
+  date         String // YYYY-MM-DD
+  rewardStones Int      @default(0)
+  rewardJades  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, date])
+}
+
+// ---------- 寻宝罗盘 ----------
+
+model TreasureLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  playerId   String   @db.Uuid
+  date       String // YYYY-MM-DD
+  rewardType String
+  rewardText String   @default("")
+  createdAt  DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, date])
 }
 
 // ---------- 领地 ----------

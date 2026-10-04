@@ -736,3 +736,56 @@ body,
   gap: 8px;
 }
 
+/* ---------- 每日福利 ---------- */
+.daily-panel {
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  padding: 18px;
+  max-width: 460px;
+  width: 94vw;
+  max-height: 84vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #f5e9c8;
+}
+.daily-panel h3 {
+  color: #ffd166;
+  margin-bottom: 12px;
+}
+.checkin-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.checkin-day {
+  background: #1a150c;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 6px 2px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+.checkin-day-num {
+  color: #cbb98a;
+}
+.checkin-reward {
+  font-size: 11px;
+}
+.checkin-next {
+  border-color: #b8860b;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.checkin-done {
+  background: #24301f;
+  border-color: #3f5c34;
+}
+.checkin-mark {
+  height: 12px;
+  font-size: 11px;
+  color: #6fcf97;
+}
+

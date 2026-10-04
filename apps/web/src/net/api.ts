@@ -4,6 +4,8 @@ import type {
   BreakthroughInfoDto,
   BreakthroughResultDto,
   BuildingDto,
+  CheckinResultDto,
+  DailyDto,
   EventResolveResultDto,
   FarmStateDto,
   FriendsDto,
@@ -16,6 +18,7 @@ import type {
   SellResultDto,
   ServeResultDto,
   TavernDto,
+  TreasureResultDto,
   UpgradeResultDto,
   VisitDto,
   WaterResultDto,
@@ -236,6 +239,20 @@ export function apiWildAttack(targetPlayerId: string): Promise<AttackResultDto> 
     method: "POST",
     body: JSON.stringify({ targetPlayerId }),
   });
+}
+
+// ---------- 每日签到与寻宝 ----------
+
+export function apiDaily(): Promise<DailyDto> {
+  return api<DailyDto>("/api/daily");
+}
+
+export function apiCheckin(): Promise<CheckinResultDto> {
+  return api<CheckinResultDto>("/api/checkin", { method: "POST", body: "{}" });
+}
+
+export function apiTreasure(): Promise<TreasureResultDto> {
+  return api<TreasureResultDto>("/api/treasure", { method: "POST", body: "{}" });
 }
 
 export type { BuildingDto };
