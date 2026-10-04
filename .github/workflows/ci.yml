@@ -19,3 +19,64 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+
+  # 完整联机测试：嵌入式数据库(PGlite) + 后端 + 全部阶段 E2E
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build -w @tavern/shared
+      - run: npm run build -w @tavern/database
+      - run: npm run build -w @tavern/server
+
+      - name: 启动本地数据库（PGlite）
+        run: node scripts/db-local.mjs &
+        env:
+          PGLITE_DATA_DIR: /tmp/tavern-pgdata
+          PG_PORT: "5432"
+
+      - name: 等待数据库就绪
+        run: |
+          for i in $(seq 1 30); do
+            if node -e "require('net').connect(5432,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"; then break; fi
+            sleep 1
+          done
+
+      - name: 建表迁移
+        run: npm run db:deploy
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:5432/postgres"
+
+      - name: 启动后端
+        run: node apps/server/dist/index.js &
+        env:
+          NODE_ENV: development
+          PORT: "4000"
+          DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:5432/postgres?connection_limit=1&pgbouncer=true"
+          JWT_SECRET: ci-secret
+
+      - name: 等待后端就绪
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4000/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://localhost:4000/api/health
+
+      - name: 阶段1 经营核心
+        run: node scripts/e2e-stage1.mjs
+      - name: 阶段2 账号系统
+        run: node scripts/e2e-stage2.mjs
+      - name: 阶段3 经营深度
+        run: node scripts/e2e-stage3.mjs
+      - name: 阶段4 顾客与社交
+        run: node scripts/e2e-stage4.mjs
+      - name: 阶段5 公共广场（Socket）
+        run: node scripts/e2e-stage5.mjs
