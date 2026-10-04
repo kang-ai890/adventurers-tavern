@@ -27,6 +27,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Build shared
+        run: npm run build -w @tavern/shared
+
       - name: Build web
         run: npm run build -w @tavern/web
         env:
