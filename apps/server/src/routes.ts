@@ -43,6 +43,7 @@ import {
   waterPlot,
 } from "./services/social.js";
 import { bestLine, plazaStatus, refreshStallStock, socketIdsOfPlayer } from "./services/plaza.js";
+import { attack, enterWild, gather, getWild, leaveWild } from "./services/wild.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -455,6 +456,57 @@ apiRouter.post("/visit/:playerId/water", authRequired, wrap(async (req, res) => 
 apiRouter.get("/plaza", (_req, res) => {
   res.json({ ...plazaStatus(), bestLine: bestLine() });
 });
+
+// ---------- 野外（采集 / PK / 悬赏） ----------
+
+apiRouter.get("/wild", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getWild(player));
+}));
+
+apiRouter.post("/wild/enter", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  if (player.level < 11) {
+    res.status(400).json({ error: "筑基之后才能进入野外（11 级）" });
+    return;
+  }
+  enterWild(player);
+  res.json({ ok: true });
+}));
+
+apiRouter.post("/wild/leave", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  leaveWild(player);
+  res.json({ ok: true });
+}));
+
+apiRouter.post("/wild/gather", authRequired, wrap(async (req, res) => {
+  const body = req.body as { spotType?: "fish" | "mine" | "herb" };
+  if (body.spotType !== "fish" && body.spotType !== "mine" && body.spotType !== "herb") {
+    res.status(400).json({ error: "采集点类型错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await gather(player, body.spotType));
+}));
+
+apiRouter.get("/bounty", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  const wild = await getWild(player);
+  res.json({ bounty: wild.bounty });
+}));
+
+apiRouter.post("/wild/attack", authRequired, wrap(async (req, res) => {
+  const body = req.body as { targetPlayerId?: string; forceWin?: boolean; forceLose?: boolean };
+  if (!body.targetPlayerId) {
+    res.status(400).json({ error: "请指定目标" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  const dev = env.NODE_ENV === "development";
+  const force = dev && body.forceWin ? "win" : dev && body.forceLose ? "lose" : undefined;
+  res.json(await attack(player, body.targetPlayerId, force));
+}));
 
 // ---------- 工具函数 ----------
 

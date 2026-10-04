@@ -62,6 +62,7 @@ model Player {
   energy          Int      @default(100) // 体力
   energyUpdatedAt DateTime @default(now())
   killScore       Int      @default(0) // 杀孽值，>0 为红名
+  killScoreUpdatedAt DateTime? // 杀孽衰减结算时间（-1/小时）
   fame            Int      @default(0) // 口碑经验值
   beautyScore     Int      @default(0) // 领地美观度
   totalRevenue    Int      @default(0) // 酒馆累计营业额（决定口碑等级）
@@ -81,6 +82,9 @@ model Player {
   eventLogs     EventLog[]
   breakthroughs BreakthroughLog[]
   tavernOrders  TavernOrder[]
+  gatherLogs    GatherLog[]
+  attacksMade   AttackLog[]  @relation("AttackAttacker")
+  attacksTaken  AttackLog[]  @relation("AttackVictim")
 
   @@index([level])
   @@index([realm])
@@ -171,6 +175,40 @@ model TavernOrder {
   player Player @relation(fields: [playerId], references: [id])
 
   @@index([playerId, status])
+}
+
+// ---------- 野外采集 ----------
+
+model GatherLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  spotType  String   // fish / mine / herb
+  itemId    String
+  quantity  Int      @default(1)
+  exp       Int      @default(0)
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, createdAt])
+}
+
+// ---------- 野外袭击 ----------
+
+model AttackLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  attackerId    String   @db.Uuid
+  victimId      String   @db.Uuid
+  success       Boolean
+  victimWasRed  Boolean  @default(false)
+  lootSnapshot  Json?
+  createdAt     DateTime @default(now())
+
+  attacker Player @relation("AttackAttacker", fields: [attackerId], references: [id])
+  victim   Player @relation("AttackVictim", fields: [victimId], references: [id])
+
+  @@index([attackerId, createdAt])
+  @@index([victimId, createdAt])
 }
 
 // ---------- 领地 ----------

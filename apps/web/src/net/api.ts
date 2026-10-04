@@ -1,4 +1,5 @@
 import type {
+  AttackResultDto,
   AuthResponseDto,
   BreakthroughInfoDto,
   BreakthroughResultDto,
@@ -6,6 +7,7 @@ import type {
   EventResolveResultDto,
   FarmStateDto,
   FriendsDto,
+  GatherResultDto,
   HarvestResultDto,
   PlantResultDto,
   PlayerDto,
@@ -17,6 +19,7 @@ import type {
   UpgradeResultDto,
   VisitDto,
   WaterResultDto,
+  WildDto,
 } from "@tavern/shared";
 
 const API_BASE = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? window.location.origin;
@@ -204,6 +207,34 @@ export function apiWater(playerId: string, plotIndex: number): Promise<WaterResu
   return api<WaterResultDto>(`/api/visit/${playerId}/water`, {
     method: "POST",
     body: JSON.stringify({ plotIndex }),
+  });
+}
+
+// ---------- 野外 ----------
+
+export function apiWild(): Promise<WildDto> {
+  return api<WildDto>("/api/wild");
+}
+
+export function apiWildEnter(): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>("/api/wild/enter", { method: "POST", body: "{}" });
+}
+
+export function apiWildLeave(): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>("/api/wild/leave", { method: "POST", body: "{}" });
+}
+
+export function apiWildGather(spotType: "fish" | "mine" | "herb"): Promise<GatherResultDto> {
+  return api<GatherResultDto>("/api/wild/gather", {
+    method: "POST",
+    body: JSON.stringify({ spotType }),
+  });
+}
+
+export function apiWildAttack(targetPlayerId: string): Promise<AttackResultDto> {
+  return api<AttackResultDto>("/api/wild/attack", {
+    method: "POST",
+    body: JSON.stringify({ targetPlayerId }),
   });
 }
 

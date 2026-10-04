@@ -80,3 +80,5 @@ jobs:
         run: node scripts/e2e-stage4.mjs
       - name: 阶段5 公共广场（Socket）
         run: node scripts/e2e-stage5.mjs
+      - name: 阶段6 野外采集与PK红名
+        run: node scripts/e2e-stage6.mjs

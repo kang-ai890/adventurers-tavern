@@ -27,6 +27,7 @@ import {
   playersInViewOf,
   type PlayerSnapshot,
 } from "./services/plaza.js";
+import { applyKillScoreDecay } from "./services/wild.js";
 
 const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
@@ -107,6 +108,20 @@ io.on("connection", (socket) => {
         sentAt: new Date().toISOString(),
       });
       return;
+    }
+    // 红名禁入坊市（安全区）
+    const dbPlayer = await prisma.player.findUnique({ where: { id: snapshot.playerId } });
+    if (dbPlayer) {
+      const decayed = await applyKillScoreDecay(dbPlayer);
+      if (decayed.killScore > 0) {
+        socket.emit("notification", {
+          type: "system",
+          title: "坊市守卫拦截",
+          body: `你身负杀孽（${decayed.killScore}），红名之身不得踏入坊市！野外洗白后再来。`,
+          sentAt: new Date().toISOString(),
+        });
+        return;
+      }
     }
     const joined = await joinPlaza(line, socket.id, snapshot);
     if (!joined.ok || !joined.me) {

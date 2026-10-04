@@ -240,6 +240,60 @@ export interface WaterResultDto {
   waterCountToday: number;
 }
 
+// ---------- 野外采集与 PK ----------
+
+export interface WildPlayerDto {
+  playerId: string;
+  nickname: string;
+  realm: string;
+  level: number;
+  red: boolean; // 是否红名
+}
+
+export interface BountyEntryDto {
+  playerId: string;
+  nickname: string;
+  realm: string;
+  killScore: number;
+  bounty: number; // 悬赏金额
+}
+
+export interface WildDto {
+  season: string;
+  energy: number;
+  energyMax: number;
+  unlocked: boolean; // 是否已达筑基
+  wildPlayers: WildPlayerDto[];
+  bounty: BountyEntryDto[];
+}
+
+export interface GatherResultDto {
+  spotType: "fish" | "mine" | "herb";
+  itemId: string;
+  itemName: string;
+  icon: string;
+  exp: number;
+  energyLeft: number;
+  levelUps: number;
+  newLevel: number;
+}
+
+export interface LootEntryDto {
+  itemId: string;
+  name: string;
+  icon: string;
+  quantity: number;
+}
+
+export interface AttackResultDto {
+  success: boolean;
+  victimWasRed: boolean;
+  loot: LootEntryDto[]; // 胜利：抢到的；失败：失去的
+  killScoreNow: number;
+  bountyReward: number; // 讨伐红名成功领到的悬赏灵石
+  message: string;
+}
+
 export interface SellResultDto {
   itemId: string;
   quantity: number;

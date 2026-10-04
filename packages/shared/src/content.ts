@@ -315,3 +315,96 @@ export const WATER_MAX_PER_PLOT_PER_DAY = 5;
 export const WATERER_REWARD_STONES = 10;
 /** 浇水者好感度收益 */
 export const WATERER_AFFINITY_GAIN = 2;
+
+// ============================================================
+// 野外采集（数值设计 §6）
+// ============================================================
+
+export interface GatherItem {
+  itemId: string;
+  name: string;
+  icon: string;
+  weight: number; // 概率权重
+  exp: number;
+  sellPrice: number;
+}
+
+export type GatherSpotType = "fish" | "mine" | "herb";
+
+export const GATHER_TABLES: Record<GatherSpotType, { label: string; icon: string; items: GatherItem[] }> = {
+  fish: {
+    label: "钓鱼",
+    icon: "🎣",
+    items: [
+      { itemId: "blue_carp", name: "青鱼", icon: "🐟", weight: 60, exp: 10, sellPrice: 15 },
+      { itemId: "spirit_carp", name: "灵鲤", icon: "🐠", weight: 30, exp: 15, sellPrice: 40 },
+      { itemId: "golden_fish", name: "金背灵鱼", icon: "🐡", weight: 8, exp: 30, sellPrice: 150 },
+      { itemId: "dragon_fish", name: "龙须鱼", icon: "🐲", weight: 2, exp: 60, sellPrice: 800 },
+    ],
+  },
+  mine: {
+    label: "挖矿",
+    icon: "⛏️",
+    items: [
+      { itemId: "iron_ore", name: "铁矿石", icon: "🪨", weight: 60, exp: 10, sellPrice: 20 },
+      { itemId: "copper_ore", name: "铜精矿", icon: "🔶", weight: 30, exp: 20, sellPrice: 50 },
+      { itemId: "black_iron", name: "玄铁精", icon: "⚙️", weight: 8, exp: 40, sellPrice: 200 },
+      { itemId: "star_sand", name: "星辰砂", icon: "✨", weight: 2, exp: 80, sellPrice: 1_000 },
+    ],
+  },
+  herb: {
+    label: "采药",
+    icon: "🌿",
+    items: [
+      { itemId: "hemostasis_herb", name: "止血草", icon: "🌱", weight: 60, exp: 10, sellPrice: 12 },
+      { itemId: "mist_grass", name: "灵雾草", icon: "🍃", weight: 30, exp: 15, sellPrice: 45 },
+      { itemId: "century_knotweed", name: "百年何首乌", icon: "🥔", weight: 8, exp: 35, sellPrice: 180 },
+      { itemId: "millennium_lingzhi", name: "千年灵芝", icon: "🍄", weight: 2, exp: 70, sellPrice: 900 },
+    ],
+  },
+};
+
+/** 采集体力消耗（1 点/次） */
+export const GATHER_ENERGY_COST = 1;
+export const ENERGY_MAX = 100;
+export const ENERGY_REGEN_MINUTES = 5; // 5 分钟回 1 点
+
+const gatherItemIds = new Set(
+  Object.values(GATHER_TABLES).flatMap((t) => t.items.map((i) => i.itemId)),
+);
+
+/** 是否为野外采集物（PK 抢夺只针对这类物品） */
+export function isGatherItem(itemId: string): boolean {
+  return gatherItemIds.has(itemId);
+}
+
+// ============================================================
+// 野外 PK 与红名（数值设计 §11）
+// ============================================================
+
+export const PK_REQUIRE_LEVEL = 11; // 筑基及以上可入野外/被袭击
+export const PK_KILL_SCORE_PER_ATTACK = 100; // 主动袭击杀孽 +100/次
+export const PK_LOOT_BASE_RATIO = 0.15; // 抢夺基础比例
+export const PK_LOOT_REALM_STEP = 0.05; // 受害者每高 1 大境界 +5%
+export const PK_LOOT_MAX = 0.3;
+export const PK_LOOT_MIN = 0.1;
+export const PK_DEFEAT_LOOT_RATIO = 0.1; // 袭击失败掉 10% 采集物给对方
+export const PK_SAME_TARGET_COOLDOWN_MINUTES = 30;
+export const PK_SAME_TARGET_DAILY_LIMIT = 5;
+export const PK_MAX_ATTACKS_PER_DAY = 10;
+export const RED_NAME_DECAY_PER_HOUR = 1; // 杀孽 -1/小时
+export const BOUNTY_KILL_SCORE_REDUCTION = 50; // 红名被讨伐杀孽 -50
+export const BOUNTY_BASE_MULTIPLIER = 20; // 悬赏 = 杀孽 × 20 × (1 + 0.2 × 境界序号)
+export const BOUNTY_REALM_MULTIPLIER = 0.2;
+export const KILL_SCORE_MAX = 5_000;
+
+/** 境界序号：炼气 0 ~ 渡劫 8 */
+export function realmIndex(realm: string): number {
+  const idx = REALMS.indexOf(realm as (typeof REALMS)[number]);
+  return idx < 0 ? 0 : idx;
+}
+
+/** 悬赏金额公式（数值设计 §11.2） */
+export function bountyOf(killScore: number, realm: string): number {
+  return Math.floor(killScore * BOUNTY_BASE_MULTIPLIER * (1 + BOUNTY_REALM_MULTIPLIER * realmIndex(realm)));
+}
