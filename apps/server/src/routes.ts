@@ -42,6 +42,7 @@ import {
   sendFriendRequest,
   waterPlot,
 } from "./services/social.js";
+import { bestLine, plazaStatus, refreshStallStock, socketIdsOfPlayer } from "./services/plaza.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -241,6 +242,8 @@ apiRouter.post("/farm/harvest", authRequired, wrap(async (req, res) => {
   await progressQuests(player.id, "harvest", 1);
   const force = (req.body as { forceEvent?: boolean }).forceEvent === true && env.NODE_ENV === "development";
   const pendingEvent = maybeTriggerEvent(player.id, force);
+  // 摊位库存同步（收获入包后）
+  for (const sid of socketIdsOfPlayer(player.id)) void refreshStallStock(sid);
 
   const result: HarvestResultDto = {
     cropId: crop.id,
@@ -286,6 +289,8 @@ apiRouter.post("/shop/sell", authRequired, wrap(async (req, res) => {
     stonesLeft: updated.stones,
   };
   await progressQuests(player.id, "sell", body.quantity);
+  // 摊位库存同步（出售减包后）
+  for (const sid of socketIdsOfPlayer(player.id)) void refreshStallStock(sid);
   res.json(result);
 }));
 
@@ -444,6 +449,12 @@ apiRouter.post("/visit/:playerId/water", authRequired, wrap(async (req, res) => 
   const player = await getPlayerOrThrow(req.userId);
   res.json(await waterPlot(player, req.params.playerId, body.plotIndex));
 }));
+
+// ---------- 广场 ----------
+
+apiRouter.get("/plaza", (_req, res) => {
+  res.json({ ...plazaStatus(), bestLine: bestLine() });
+});
 
 // ---------- 工具函数 ----------
 

@@ -2,20 +2,31 @@ import http from "node:http";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
 import { prisma, seedContent } from "@tavern/database";
 import {
   DEFAULTS,
   REALMS,
-  type ClientToServerEvents,
-  type ServerToClientEvents,
-  type LoginResult,
-  type PlazaPlayer,
+  realmOfLevel,
   type ChatMessage,
+  type ClientToServerEvents,
+  type LoginResult,
+  type ServerToClientEvents,
 } from "@tavern/shared";
 import { env } from "./env.js";
 import { apiRouter } from "./routes.js";
 import { bus, BUS_EVENTS, type BreakthroughAnnounce } from "./bus.js";
+import {
+  closeStall,
+  getPlazaPlayer,
+  joinPlaza,
+  leavePlaza,
+  movePlazaPlayer,
+  openStall,
+  playersInViewOf,
+  type PlayerSnapshot,
+} from "./services/plaza.js";
 
 const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
@@ -44,86 +55,104 @@ app.get("/api/meta", (_req, res) => {
   });
 });
 
-// ---------- Socket.IO（骨架版：游客握手 + 广场占位） ----------
+// ---------- Socket.IO（阶段5：JWT 真实身份 + 视野广播 + 摆摊展示） ----------
 
 const server = http.createServer(app);
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
   cors: { origin: env.CORS_ORIGIN },
 });
 
-/** 广场分线内存态（阶段 5 完善：视野广播、分线扩容） */
-const plazaLines = new Map<number, Map<string, PlazaPlayer>>();
-function getLine(line: number) {
-  if (!plazaLines.has(line)) plazaLines.set(line, new Map());
-  return plazaLines.get(line)!;
+/** 解析 JWT → 玩家快照（供广场上屏使用） */
+async function resolvePlayerByToken(token: string): Promise<PlayerSnapshot | null> {
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as { sub: string };
+    const player = await prisma.player.findUnique({ where: { userId: payload.sub } });
+    if (!player) return null;
+    return {
+      playerId: player.id,
+      nickname: player.nickname,
+      avatar: player.avatar,
+      level: player.level,
+      realm: realmOfLevel(player.level),
+      fame: player.fame,
+    };
+  } catch {
+    return null;
+  }
 }
 
 io.on("connection", (socket) => {
   console.log(`[socket] connected ${socket.id}`);
 
-  socket.on("login", async (_payload) => {
-    // 阶段 2 接入完整账号：游客建号 / JWT 校验。骨架版直接放行。
-    const result: LoginResult = { ok: true };
+  socket.on("login", async (payload) => {
+    const result: LoginResult = { ok: false, error: "登录失败" };
+    if (payload.token) {
+      const snapshot = await resolvePlayerByToken(payload.token);
+      if (snapshot) {
+        socket.data.snapshot = snapshot;
+        socket.data.authenticated = true;
+        result.ok = true;
+      }
+    }
     socket.emit("loginResult", result);
   });
 
-  socket.on("plazaJoin", ({ line }) => {
-    const room = `plaza:${line}`;
-    const players = getLine(line);
-    if (players.size >= DEFAULTS.plazaLineCapacity) {
+  socket.on("plazaJoin", async ({ line }) => {
+    const snapshot = socket.data.snapshot as PlayerSnapshot | undefined;
+    if (!snapshot) {
       socket.emit("notification", {
         type: "system",
-        title: "坊市拥挤",
-        body: "当前分线已满，请稍后再试",
+        title: "未登录",
+        body: "请先登录再进入坊市",
         sentAt: new Date().toISOString(),
       });
       return;
     }
-    socket.join(room);
-    const me: PlazaPlayer = {
-      id: socket.id,
-      nickname: `游客-${socket.id.slice(0, 4)}`,
-      avatar: "default",
-      level: 1,
-      realm: "炼气",
-      fame: 0,
-      x: 200 + Math.floor(Math.random() * 200),
-      y: 200 + Math.floor(Math.random() * 200),
-      direction: "down",
-    };
-    players.set(socket.id, me);
+    const joined = await joinPlaza(line, socket.id, snapshot);
+    if (!joined.ok || !joined.me) {
+      socket.emit("notification", {
+        type: "system",
+        title: "坊市拥挤",
+        body: joined.error ?? "当前分线已满，请稍后再试",
+        sentAt: new Date().toISOString(),
+      });
+      return;
+    }
+    socket.join(`plaza:${line}`);
     socket.data.plazaLine = line;
-    socket.emit("plazaPlayers", { line, players: [...players.values()] });
-    socket.to(room).emit("plazaPlayers", { line, players: [me] });
+    socket.emit("plazaPlayers", { line, players: joined.players });
+    // 只通知视野内的其他玩家（新人出生点附近）
+    const inView = playersInViewOf(line, joined.me.x, joined.me.y, socket.id);
+    if (inView.length > 0) {
+      socket.to(`plaza:${line}`).emit("plazaPlayers", { line, players: [joined.me] });
+    }
   });
 
   socket.on("plazaMove", (payload) => {
     const line = socket.data.plazaLine as number | undefined;
     if (line === undefined) return;
-    const players = getLine(line);
-    const me = players.get(socket.id);
+    const me = movePlazaPlayer(socket.id, payload.x, payload.y, payload.direction);
     if (!me) return;
-    me.x = payload.x;
-    me.y = payload.y;
-    me.direction = payload.direction;
-    socket.to(`plaza:${line}`).emit("plazaPlayerMoved", {
-      id: socket.id,
-      x: me.x,
-      y: me.y,
-      direction: me.direction,
-    });
+    // 视野广播：只发给距离 ≤ 视野半径的玩家
+    for (const viewer of playersInViewOf(line, me.x, me.y, socket.id)) {
+      io.to(viewer.socketId).emit("plazaPlayerMoved", {
+        id: me.id,
+        x: me.x,
+        y: me.y,
+        direction: me.direction,
+      });
+    }
   });
 
   socket.on("plazaChat", ({ text }) => {
     const line = socket.data.plazaLine as number | undefined;
     const trimmed = text.trim().slice(0, DEFAULTS.chatMaxLength);
     if (!trimmed || line === undefined) return;
-    const players = getLine(line);
-    const me = players.get(socket.id);
+    const snapshot = socket.data.snapshot as PlayerSnapshot | undefined;
     const msg: ChatMessage = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       senderId: socket.id,
-      senderName: me?.nickname ?? "无名修士",
+      senderName: snapshot?.nickname ?? "无名修士",
       text: trimmed,
       channel: "plaza",
       sentAt: new Date().toISOString(),
@@ -131,13 +160,38 @@ io.on("connection", (socket) => {
     io.to(`plaza:${line}`).emit("plazaChat", msg);
   });
 
+  socket.on("plazaStall", async (payload) => {
+    const line = socket.data.plazaLine as number | undefined;
+    if (line === undefined) return;
+    const result = await openStall(socket.id, payload);
+    if (!result.ok) {
+      socket.emit("notification", {
+        type: "system",
+        title: "摆摊失败",
+        body: result.error ?? "未知错误",
+        sentAt: new Date().toISOString(),
+      });
+      return;
+    }
+    io.to(`plaza:${line}`).emit("plazaStallUpdate", { id: result.stall ? (getPlazaPlayer(socket.id)?.id ?? socket.id) : socket.id, stall: result.stall });
+  });
+
+  socket.on("plazaStallClose", () => {
+    const line = socket.data.plazaLine as number | undefined;
+    const stall = closeStall(socket.id);
+    if (line !== undefined && stall) {
+      const me = getPlazaPlayer(socket.id);
+      io.to(`plaza:${line}`).emit("plazaStallUpdate", { id: me?.id ?? socket.id, stall: null });
+    }
+  });
+
   socket.on("ping", ({ at }) => socket.emit("pong", { at }));
 
   socket.on("disconnect", () => {
-    const line = socket.data.plazaLine as number | undefined;
-    if (line !== undefined) {
-      getLine(line).delete(socket.id);
-      io.to(`plaza:${line}`).emit("plazaPlayerLeft", { id: socket.id });
+    const me = getPlazaPlayer(socket.id);
+    const line = leavePlaza(socket.id).line;
+    if (line !== null && me) {
+      io.to(`plaza:${line}`).emit("plazaPlayerLeft", { id: me.id });
     }
     console.log(`[socket] disconnected ${socket.id}`);
   });

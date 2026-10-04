@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServerEvents, ServerToClientEvents } from "@tavern/shared";
 import { useGameStore } from "../store/useGameStore";
+import { getToken } from "./api";
 
 export type TavernSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -17,18 +18,48 @@ export const socket: TavernSocket = io(SERVER_URL, {
   transports: ["websocket", "polling"],
 });
 
+/** 广场分线状态（人数最少的分线） */
+let bestLine = 1;
+
+async function fetchBestLine(): Promise<number> {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/plaza`);
+    const data = (await res.json()) as { bestLine?: number };
+    if (data.bestLine) bestLine = data.bestLine;
+  } catch {
+    /* 保持默认 */
+  }
+  return bestLine;
+}
+
+/** REST 登录成功后调用：Socket 携带 JWT 接入广场真实身份 */
+export async function socketLogin() {
+  const token = getToken();
+  if (!token) return;
+  socket.emit("login", { token });
+}
+
+async function joinPlaza() {
+  await fetchBestLine();
+  socket.emit("plazaJoin", { line: bestLine });
+}
+
 export function bindSocketEvents() {
   const store = useGameStore.getState;
 
-  socket.on("connect", () => store().setConnection("online"));
+  socket.on("connect", () => {
+    store().setConnection("online");
+    // 断线重连：已有 token 则自动重新登录进广场
+    if (getToken()) {
+      socket.emit("login", { token: getToken()! });
+    }
+  });
   socket.on("disconnect", () => store().setConnection("offline"));
   socket.io.on("reconnect_attempt", () => store().setConnection("connecting"));
 
   socket.on("loginResult", (r) => {
     if (r.ok) {
-      store().setLoggedIn(true);
-      if (r.player) store().setNickname(r.player.nickname);
-      socket.emit("plazaJoin", { line: 1 });
+      void joinPlaza();
     }
   });
 
@@ -37,6 +68,8 @@ export function bindSocketEvents() {
   socket.on("plazaPlayerMoved", (p) => store().movePlayer(p.id, p.x, p.y, p.direction));
 
   socket.on("plazaPlayerLeft", ({ id }) => store().removePlayer(id));
+
+  socket.on("plazaStallUpdate", ({ id, stall }) => store().setPlayerStall(id, stall));
 
   socket.on("plazaChat", (msg) => store().addChat(msg));
 
@@ -52,21 +85,18 @@ export function bindSocketEvents() {
   );
 }
 
-/** 游客登录：设备凭证存 localStorage，注册时携带以绑定数据 */
-export function loginAsGuest(nickname: string) {
-  localStorage.setItem("tavern.nickname", nickname); // 骨架阶段先本地留存，账号系统接入后随登录上报
-  let deviceToken = localStorage.getItem("tavern.deviceToken");
-  if (!deviceToken) {
-    deviceToken = `d-${crypto.randomUUID()}`;
-    localStorage.setItem("tavern.deviceToken", deviceToken);
-  }
-  socket.emit("login", { guest: { deviceToken } });
-}
-
 export function sendPlazaChat(text: string) {
   socket.emit("plazaChat", { text });
 }
 
 export function sendPlazaMove(payload: Parameters<ClientToServerEvents["plazaMove"]>[0]) {
   socket.emit("plazaMove", payload);
+}
+
+export function sendPlazaStall(payload: { title: string; itemId: string; price: number }) {
+  socket.emit("plazaStall", payload);
+}
+
+export function sendPlazaStallClose() {
+  socket.emit("plazaStallClose");
 }

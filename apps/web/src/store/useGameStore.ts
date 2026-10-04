@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import type { ChatMessage, FarmStateDto, InventoryItemDto, PlazaPlayer, PlayerDto } from "@tavern/shared";
+import type {
+  ChatMessage,
+  FarmStateDto,
+  InventoryItemDto,
+  PlazaPlayer,
+  PlayerDto,
+  StallInfo,
+} from "@tavern/shared";
 
 export type ConnectionStatus = "connecting" | "online" | "offline";
 export type AccountType = "guest" | "registered" | null;
@@ -20,6 +27,7 @@ interface GameState {
   farmView: boolean;
   notice: string | null; // 操作结果提示
   activePanel: "breakthrough" | "quests" | "friends" | null;
+  myStall: StallInfo | null; // 我自己的摊位
 
   setConnection: (s: ConnectionStatus) => void;
   setServerUrl: (url: string) => void;
@@ -30,6 +38,7 @@ interface GameState {
   upsertPlayers: (players: PlazaPlayer[]) => void;
   movePlayer: (id: string, x: number, y: number, direction: PlazaPlayer["direction"]) => void;
   removePlayer: (id: string) => void;
+  setPlayerStall: (id: string, stall: StallInfo | null) => void;
   addChat: (msg: ChatMessage) => void;
 
   setPlayer: (p: PlayerDto) => void;
@@ -37,6 +46,7 @@ interface GameState {
   setFarmView: (v: boolean) => void;
   setNotice: (n: string | null) => void;
   setActivePanel: (p: GameState["activePanel"]) => void;
+  setMyStall: (s: StallInfo | null) => void;
   applyInventoryChange: (itemId: string, delta: number) => void;
 }
 
@@ -55,6 +65,7 @@ export const useGameStore = create<GameState>((set) => ({
   farmView: false,
   notice: null,
   activePanel: null,
+  myStall: null,
 
   setConnection: (connection) => set({ connection }),
   setServerUrl: (serverUrl) => set({ serverUrl }),
@@ -85,6 +96,13 @@ export const useGameStore = create<GameState>((set) => ({
       return { nearby };
     }),
 
+  setPlayerStall: (id, stall) =>
+    set((s) => {
+      const p = s.nearby[id];
+      if (!p) return s;
+      return { nearby: { ...s.nearby, [id]: { ...p, stall } } };
+    }),
+
   addChat: (msg) => set((s) => ({ chat: [...s.chat.slice(-49), msg] })),
 
   setPlayer: (player) => set({ player, nickname: player.nickname, playerId: player.id }),
@@ -92,6 +110,7 @@ export const useGameStore = create<GameState>((set) => ({
   setFarmView: (farmView) => set({ farmView }),
   setNotice: (notice) => set({ notice }),
   setActivePanel: (activePanel) => set({ activePanel }),
+  setMyStall: (myStall) => set({ myStall }),
 
   applyInventoryChange: (itemId, delta) =>
     set((s) => {

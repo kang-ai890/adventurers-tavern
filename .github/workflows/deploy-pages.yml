@@ -30,8 +30,9 @@ jobs:
       - name: Build web
         run: npm run build -w @tavern/web
         env:
-          # 后端 WebSocket 地址，改成你的 Render 服务地址
-          VITE_SERVER_URL: https://adventurers-tavern-server.onrender.com
+          # 后端 WebSocket 地址：Render 部署完成后填真实地址（如 https://xxx.onrender.com）
+          # 未配置时前端回退到同源地址（仅静态页面可用）
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
 
       - name: Build admin
         run: npm run build -w @tavern/admin

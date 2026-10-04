@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import { useTranslation } from "react-i18next";
 import { isRealmCapLevel } from "@tavern/shared";
 import { useGameStore } from "./store/useGameStore";
-import { bindSocketEvents, loginAsGuest, sendPlazaChat, SERVER_URL } from "./net/socket";
+import { bindSocketEvents, sendPlazaChat, sendPlazaStall, sendPlazaStallClose, SERVER_URL, socketLogin } from "./net/socket";
 import { apiGetFarm, apiGetPlayer, apiGuestLogin, apiLogin, apiLogout, apiRegister } from "./net/api";
 import { GameScene } from "./game/GameScene";
 import { FarmPanel } from "./components/FarmPanel";
@@ -85,16 +85,55 @@ function Hud() {
   );
 }
 
-/** 聊天面板 */
+/** 聊天面板（含摆摊） */
 function ChatPanel() {
   const { t } = useTranslation();
   const chat = useGameStore((s) => s.chat);
+  const farm = useGameStore((s) => s.farm);
+  const myStall = useGameStore((s) => s.myStall);
+  const setMyStall = useGameStore((s) => s.setMyStall);
+  const setNotice = useGameStore((s) => s.setNotice);
   const [text, setText] = useState("");
+  const [stallOpen, setStallOpen] = useState(false);
+  const [stallTitle, setStallTitle] = useState("");
+  const [stallItem, setStallItem] = useState("");
+  const [stallPrice, setStallPrice] = useState("10");
 
   const submit = () => {
     if (!text.trim()) return;
     sendPlazaChat(text);
     setText("");
+  };
+
+  const openStall = () => {
+    const itemId = stallItem || farm?.inventory[0]?.itemId;
+    const item = farm?.inventory.find((i) => i.itemId === itemId);
+    const price = Number(stallPrice) || 1;
+    if (!item) {
+      setNotice("背包空空，先去收获点作物再来摆摊吧");
+      return;
+    }
+    sendPlazaStall({
+      title: stallTitle.trim(),
+      itemId: item.itemId,
+      price,
+    });
+    setMyStall({
+      title: stallTitle.trim() || `${useGameStore.getState().player?.nickname ?? "我"}的小摊`,
+      itemId: item.itemId,
+      itemName: item.name,
+      icon: item.icon,
+      price,
+      quantity: item.quantity,
+    });
+    setStallOpen(false);
+    setNotice("🏮 摊位已支起！");
+  };
+
+  const closeStall = () => {
+    sendPlazaStallClose();
+    setMyStall(null);
+    setNotice("已收摊");
   };
 
   return (
@@ -107,14 +146,49 @@ function ChatPanel() {
           </div>
         ))}
       </div>
-      <input
-        className="chat-input"
-        value={text}
-        placeholder={t("chat.placeholder")}
-        maxLength={200}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-      />
+      <div className="chat-row">
+        <input
+          className="chat-input"
+          value={text}
+          placeholder={t("chat.placeholder")}
+          maxLength={200}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+        />
+        {myStall ? (
+          <button className="hud-btn" onClick={closeStall}>
+            收摊
+          </button>
+        ) : (
+          <button className="hud-btn" onClick={() => setStallOpen(!stallOpen)}>
+            🏮 摆摊
+          </button>
+        )}
+      </div>
+      {myStall && (
+        <div className="stall-badge">
+          {myStall.icon} 「{myStall.title}」 {myStall.itemName} ×{myStall.quantity} @ {myStall.price} 灵石
+        </div>
+      )}
+      {stallOpen && (
+        <div className="stall-form">
+          <input className="chat-input" value={stallTitle} placeholder="摊位名（可选）" maxLength={12} onChange={(e) => setStallTitle(e.target.value)} />
+          <select className="chat-input" value={stallItem} onChange={(e) => setStallItem(e.target.value)}>
+            <option value="">选择货物</option>
+            {farm?.inventory.map((i) => (
+              <option key={i.itemId} value={i.itemId}>
+                {i.icon} {i.name}（×{i.quantity}）
+              </option>
+            ))}
+          </select>
+          <div className="chat-row">
+            <input className="chat-input" type="number" min={1} value={stallPrice} placeholder="单价（灵石）" onChange={(e) => setStallPrice(e.target.value)} />
+            <button className="btn-sell" onClick={openStall}>
+              支摊
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -177,7 +251,7 @@ function LoginOverlay() {
     setFarm(f);
     setAccountType(kind);
     setLoggedIn(true);
-    loginAsGuest(p.nickname); // Socket 广场占位（阶段 5 接入真实身份）
+    void socketLogin(); // Socket 广场接入真实身份（JWT）
     setNotice(notice);
   };
 

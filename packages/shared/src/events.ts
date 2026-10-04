@@ -21,10 +21,23 @@ export interface PlayerPublicInfo {
   fame: number; // 口碑
 }
 
+/** 摆摊展示（交易行买卖在后续阶段） */
+export interface StallInfo {
+  title: string;
+  itemId: string;
+  itemName: string;
+  icon: string;
+  price: number;
+  quantity: number; // 展示库存
+}
+
 export interface PlazaPlayer extends PlayerPublicInfo {
+  /** Socket 连接 id */
+  socketId: string;
   x: number;
   y: number;
   direction: "up" | "down" | "left" | "right";
+  stall: StallInfo | null;
 }
 
 export interface MoveIntent {
@@ -57,6 +70,7 @@ export interface ServerToClientEvents {
   plazaPlayers: (payload: { line: number; players: PlazaPlayer[] }) => void;
   plazaPlayerMoved: (payload: { id: string; x: number; y: number; direction: PlazaPlayer["direction"] }) => void;
   plazaPlayerLeft: (payload: { id: string }) => void;
+  plazaStallUpdate: (payload: { id: string; stall: StallInfo | null }) => void;
   plazaChat: (payload: ChatMessage) => void;
   notification: (payload: Notification) => void;
   pong: (payload: { at: string }) => void;
@@ -64,9 +78,12 @@ export interface ServerToClientEvents {
 
 /** 客户端 → 服务端 */
 export interface ClientToServerEvents {
+  /** 阶段5：携带 REST 登录拿到的 JWT 接入广场（真实身份） */
   login: (payload: { token?: string; guest?: { deviceToken: string } }) => void;
   plazaJoin: (payload: { line: number }) => void;
   plazaMove: (payload: MoveIntent) => void;
   plazaChat: (payload: { text: string }) => void;
+  plazaStall: (payload: { title: string; itemId: string; price: number }) => void;
+  plazaStallClose: () => void;
   ping: (payload: { at: string }) => void;
 }

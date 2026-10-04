@@ -6,11 +6,18 @@ const WORLD_W = 1000;
 const WORLD_H = 1000;
 const SPEED = 200;
 
+interface RemoteSprite {
+  rect: Phaser.GameObjects.Rectangle;
+  label: Phaser.GameObjects.Text;
+  stallLabel: Phaser.GameObjects.Text;
+}
+
 /** 骨架版场景：程序化绘制坊市地面与建筑，WASD/方向键移动并同步到广场 */
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Rectangle;
+  private playerLabel!: Phaser.GameObjects.Text;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
-  private remotes = new Map<string, Phaser.GameObjects.Rectangle>();
+  private remotes = new Map<string, RemoteSprite>();
   private lastEmit = 0;
   private lastRemoteSync = 0;
 
@@ -23,6 +30,16 @@ export class GameScene extends Phaser.Scene {
     this.makeBuildings();
 
     this.player = this.add.rectangle(400, 300, 26, 26, 0xffd166, 1).setDepth(10);
+    this.playerLabel = this.add
+      .text(400, 268, "", {
+        fontSize: "11px",
+        color: "#ffe9b0",
+        fontFamily: "monospace",
+        backgroundColor: "rgba(20,16,10,0.65)",
+        padding: { x: 4, y: 1 },
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
 
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
     this.cameras.main.startFollow(this.player, true, 0.15, 0.15);
@@ -58,6 +75,15 @@ export class GameScene extends Phaser.Scene {
     if (time - this.lastEmit > 100) {
       this.lastEmit = time;
       sendPlazaMove({ x: Math.round(this.player.x), y: Math.round(this.player.y), direction });
+    }
+
+    // 自己头顶的名牌
+    const { player: me, myStall } = useGameStore.getState();
+    if (me) {
+      this.playerLabel.setText(
+        `${me.nickname} · ${me.realm}${myStall ? ` 🏮${myStall.itemName}@${myStall.price}` : ""}`,
+      );
+      this.playerLabel.setPosition(this.player.x, this.player.y - 22);
     }
 
     if (time - this.lastRemoteSync > 200) {
@@ -115,17 +141,44 @@ export class GameScene extends Phaser.Scene {
     const seen = new Set<string>();
     for (const p of Object.values(nearby)) {
       seen.add(p.id);
-      let rect = this.remotes.get(p.id);
-      if (!rect) {
-        rect = this.add.rectangle(p.x, p.y, 24, 24, 0x6fc3df, 1).setDepth(9);
-        this.remotes.set(p.id, rect);
+      let sprite = this.remotes.get(p.id);
+      if (!sprite) {
+        const rect = this.add.rectangle(p.x, p.y, 24, 24, 0x6fc3df, 1).setDepth(9);
+        const label = this.add
+          .text(p.x, p.y - 22, "", {
+            fontSize: "10px",
+            color: "#cfe8ff",
+            fontFamily: "monospace",
+            backgroundColor: "rgba(20,16,10,0.6)",
+            padding: { x: 4, y: 1 },
+          })
+          .setOrigin(0.5)
+          .setDepth(10);
+        const stallLabel = this.add
+          .text(p.x, p.y + 16, "", {
+            fontSize: "10px",
+            color: "#ffe9b0",
+            fontFamily: "monospace",
+            backgroundColor: "rgba(60,40,10,0.75)",
+            padding: { x: 4, y: 1 },
+          })
+          .setOrigin(0.5)
+          .setDepth(10);
+        sprite = { rect, label, stallLabel };
+        this.remotes.set(p.id, sprite);
       }
-      rect.x = p.x;
-      rect.y = p.y;
+      sprite.rect.x = p.x;
+      sprite.rect.y = p.y;
+      sprite.label.setText(`${p.nickname} · ${p.realm}Lv${p.level}`);
+      sprite.label.setPosition(p.x, p.y - 22);
+      sprite.stallLabel.setText(p.stall ? `🏮${p.stall.itemName}@${p.stall.price}灵石` : "");
+      sprite.stallLabel.setPosition(p.x, p.y + 16);
     }
-    for (const [id, rect] of this.remotes) {
+    for (const [id, sprite] of this.remotes) {
       if (!seen.has(id) || id === playerId) {
-        rect.destroy();
+        sprite.rect.destroy();
+        sprite.label.destroy();
+        sprite.stallLabel.destroy();
         this.remotes.delete(id);
       }
     }
