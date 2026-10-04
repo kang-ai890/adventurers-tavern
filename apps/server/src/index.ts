@@ -15,6 +15,7 @@ import {
 } from "@tavern/shared";
 import { env } from "./env.js";
 import { apiRouter } from "./routes.js";
+import { bus, BUS_EVENTS, type BreakthroughAnnounce } from "./bus.js";
 
 const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
@@ -139,6 +140,26 @@ io.on("connection", (socket) => {
       io.to(`plaza:${line}`).emit("plazaPlayerLeft", { id: socket.id });
     }
     console.log(`[socket] disconnected ${socket.id}`);
+  });
+});
+
+// ---------- 游戏事件广播 ----------
+
+bus.on(BUS_EVENTS.BREAKTHROUGH, (announce: BreakthroughAnnounce) => {
+  const notification = {
+    type: "announcement" as const,
+    title: "✨ 有人突破了！",
+    body: `【${announce.nickname}】渡劫成功，突破至${announce.realm}境界！四方雷动，恭贺新晋大能！`,
+    sentAt: new Date().toISOString(),
+  };
+  io.emit("notification", notification);
+  io.emit("plazaChat", {
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    senderId: "system",
+    senderName: "系统",
+    text: `🎉 ${announce.nickname} 突破至【${announce.realm}】境界！`,
+    channel: "system",
+    sentAt: new Date().toISOString(),
   });
 });
 

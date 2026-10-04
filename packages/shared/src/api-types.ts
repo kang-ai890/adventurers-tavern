@@ -67,6 +67,17 @@ export interface PlantResultDto {
   readyAt: string;
 }
 
+export interface EventPendingDto {
+  eventId: string;
+  title: string;
+  text: string;
+  options: {
+    A: { label: string; description: string };
+    B: { label: string; description: string };
+  };
+  expiresAt: string;
+}
+
 export interface HarvestResultDto {
   cropId: string;
   cropName: string;
@@ -75,6 +86,74 @@ export interface HarvestResultDto {
   levelUps: number;
   newLevel: number;
   newRealm: string;
+  pendingEvent?: EventPendingDto;
+}
+
+/** 奇遇结算结果 */
+export interface EventResolveResultDto {
+  eventId: string;
+  option: "A" | "B";
+  title: string;
+  text: string; // 结果叙述
+  effects: Array<{ label: string; value: string }>;
+}
+
+// ---------- 境界突破 ----------
+
+export interface BreakthroughMaterialDto {
+  itemId: string;
+  name: string;
+  icon: string;
+  need: number;
+  have: number;
+}
+
+export interface BreakthroughInfoDto {
+  available: boolean; // 是否处于可突破的满级状态
+  currentRealm: string;
+  targetRealm: string;
+  stonesCost: number;
+  stonesHave: number;
+  materials: BreakthroughMaterialDto[];
+  baseSuccess: number;
+  compensation: number; // 连续失败补偿（+x%）
+  successRate: number; // 最终成功率
+  fails: number;
+  cooldownUntil: string | null;
+  maxedOut: boolean; // 已到 90 级飞升上限（飞升转生系统后续实现）
+}
+
+export interface BreakthroughResultDto {
+  success: boolean;
+  fromRealm: string;
+  toRealm: string | null;
+  expLost: number;
+  stonesSpent: number;
+  cooldownUntil: string | null;
+  message: string;
+}
+
+// ---------- 委托任务 ----------
+
+export interface QuestDto {
+  id: string;
+  key: string;
+  name: string;
+  type: "plant" | "harvest" | "sell";
+  progress: number;
+  target: number;
+  rewardStones: number;
+  rewardExp: number;
+  completed: boolean;
+  expiresAt: string;
+}
+
+export interface QuestClaimResultDto {
+  questId: string;
+  rewardStones: number;
+  rewardExp: number;
+  levelUps: number;
+  newLevel: number;
 }
 
 export interface SellResultDto {

@@ -11,9 +11,7 @@ import {
   UpgradeBuildingSchema,
   cropCanPlantInSeason,
   currentSeason,
-  expToNext,
   getCrop,
-  realmOfLevel,
   type BuildingDto,
   type FarmPlotDto,
   type FarmStateDto,
@@ -31,6 +29,11 @@ import {
   registerAccount,
   type AuthedRequest,
 } from "./auth.js";
+import { addExp } from "./services/leveling.js";
+import { attemptBreakthrough, breakthroughInfo } from "./services/breakthrough.js";
+import { claimQuest, ensureDailyQuests, progressQuests, questDtos } from "./services/quests.js";
+import { maybeTriggerEvent, resolveEvent } from "./services/events.js";
+import { env } from "./env.js";
 
 export const apiRouter = Router();
 
@@ -132,8 +135,7 @@ apiRouter.get("/farm", authRequired, wrap(async (req, res) => {
 
 apiRouter.post("/farm/plant", authRequired, wrap(async (req, res) => {
   const body = PlantSchema.parse(req.body);
-  const player = await getPlayerOrThrow(req.userId);
-  const crop = getCrop(body.cropId);
+  const player = await getPlayerOrThrow(req.userId);  const crop = getCrop(body.cropId);
   if (!crop) {
     res.status(404).json({ error: "没有这种作物" });
     return;
@@ -187,6 +189,7 @@ apiRouter.post("/farm/plant", authRequired, wrap(async (req, res) => {
     stonesLeft: updated.stones,
     readyAt: readyAt.toISOString(),
   };
+  await progressQuests(player.id, "plant", 1);
   res.json(result);
 }));
 
@@ -211,16 +214,7 @@ apiRouter.post("/farm/harvest", authRequired, wrap(async (req, res) => {
     return;
   }
 
-  // 结算：入背包 + 加经验 + 清地块
-  let exp = player.exp + crop.exp;
-  let level = player.level;
-  let levelUps = 0;
-  while (exp >= expToNext(level)) {
-    exp -= expToNext(level);
-    level += 1;
-    levelUps += 1;
-  }
-
+  // 结算：入背包 + 加经验（境界满级封顶）+ 清地块
   await prisma.$transaction([
     prisma.farmPlot.update({
       where: { id: plot.id },
@@ -231,20 +225,23 @@ apiRouter.post("/farm/harvest", authRequired, wrap(async (req, res) => {
       create: { playerId: player.id, itemId: crop.id, quantity: crop.yieldCount },
       update: { quantity: { increment: crop.yieldCount } },
     }),
-    prisma.player.update({
-      where: { id: player.id },
-      data: { exp, level, realm: realmOfLevel(level) },
-    }),
   ]);
+
+  const levelResult = await addExp(player, crop.exp);
+  // 任务进度 + 奇遇判定（forceEvent 仅开发环境，用于 E2E 确定性测试）
+  await progressQuests(player.id, "harvest", 1);
+  const force = (req.body as { forceEvent?: boolean }).forceEvent === true && env.NODE_ENV === "development";
+  const pendingEvent = maybeTriggerEvent(player.id, force);
 
   const result: HarvestResultDto = {
     cropId: crop.id,
     cropName: crop.name,
     quantity: crop.yieldCount,
     expGained: crop.exp,
-    levelUps,
-    newLevel: level,
-    newRealm: realmOfLevel(level),
+    levelUps: levelResult.levelUps,
+    newLevel: levelResult.level,
+    newRealm: levelResult.realm,
+    pendingEvent: pendingEvent ?? undefined,
   };
   res.json(result);
 }));
@@ -279,6 +276,7 @@ apiRouter.post("/shop/sell", authRequired, wrap(async (req, res) => {
     stonesGained: gain,
     stonesLeft: updated.stones,
   };
+  await progressQuests(player.id, "sell", body.quantity);
   res.json(result);
 }));
 
@@ -325,6 +323,43 @@ apiRouter.post("/building/upgrade", authRequired, wrap(async (req, res) => {
     newPlotCount: FARM_BUILDING.plotsByLevel[level],
   };
   res.json(result);
+}));
+
+// ---------- 境界突破 ----------
+
+apiRouter.get("/breakthrough", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await breakthroughInfo(player));
+}));
+
+apiRouter.post("/breakthrough", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await attemptBreakthrough(player));
+}));
+
+// ---------- 委托任务 ----------
+
+apiRouter.get("/quests", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  const quests = await ensureDailyQuests(player);
+  res.json(await questDtos(quests));
+}));
+
+apiRouter.post("/quests/:id/claim", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await claimQuest(player, req.params.id));
+}));
+
+// ---------- 奇遇事件 ----------
+
+apiRouter.post("/event/resolve", authRequired, wrap(async (req, res) => {
+  const body = req.body as { eventId?: string; option?: "A" | "B" };
+  if (!body.eventId || (body.option !== "A" && body.option !== "B")) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await resolveEvent(player, body.eventId, body.option));
 }));
 
 // ---------- 工具函数 ----------

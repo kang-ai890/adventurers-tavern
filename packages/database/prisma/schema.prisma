@@ -61,6 +61,8 @@ model Player {
   killScore       Int      @default(0) // 杀孽值，>0 为红名
   fame            Int      @default(0) // 口碑
   beautyScore     Int      @default(0) // 领地美观度
+  breakthroughCooldownUntil DateTime? // 突破失败冷却
+  breakthroughFails Int    @default(0) // 连续突破失败次数（成功清零）
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -70,9 +72,63 @@ model Player {
   buildings     Building[]
   inventory     PlayerInventory[]
   announcements Announcement[]
+  quests        Quest[]
+  eventLogs     EventLog[]
+  breakthroughs BreakthroughLog[]
 
   @@index([level])
   @@index([realm])
+}
+
+// ---------- 委托任务 ----------
+
+model Quest {
+  id           String    @id @default(uuid()) @db.Uuid
+  playerId     String    @db.Uuid
+  questKey     String
+  progress     Int       @default(0)
+  target       Int
+  rewardStones Int       @default(0)
+  rewardExp    Int       @default(0)
+  status       String    @default("active") // active / claimed
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  claimedAt    DateTime?
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, status])
+}
+
+// ---------- 奇遇事件 ----------
+
+model EventLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  eventId   String
+  option    String   @default("A")
+  result    Json?
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, createdAt])
+}
+
+// ---------- 境界突破 ----------
+
+model BreakthroughLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  fromRealm String
+  toRealm   String?
+  success   Boolean
+  cost      Json? // 花费快照（灵石/材料）
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, createdAt])
 }
 
 // ---------- 领地 ----------

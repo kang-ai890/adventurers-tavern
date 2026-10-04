@@ -1,10 +1,15 @@
 import type {
   AuthResponseDto,
+  BreakthroughInfoDto,
+  BreakthroughResultDto,
   BuildingDto,
+  EventResolveResultDto,
   FarmStateDto,
   HarvestResultDto,
   PlantResultDto,
   PlayerDto,
+  QuestClaimResultDto,
+  QuestDto,
   SellResultDto,
   UpgradeResultDto,
 } from "@tavern/shared";
@@ -114,6 +119,35 @@ export function apiUpgradeFarm(): Promise<UpgradeResultDto> {
   return api<UpgradeResultDto>("/api/building/upgrade", {
     method: "POST",
     body: JSON.stringify({ type: "farm" }),
+  });
+}
+
+// ---------- 境界突破 ----------
+
+export function apiBreakthroughInfo(): Promise<BreakthroughInfoDto> {
+  return api<BreakthroughInfoDto>("/api/breakthrough");
+}
+
+export function apiBreakthrough(): Promise<BreakthroughResultDto> {
+  return api<BreakthroughResultDto>("/api/breakthrough", { method: "POST", body: "{}" });
+}
+
+// ---------- 委托任务 ----------
+
+export function apiQuests(): Promise<QuestDto[]> {
+  return api<QuestDto[]>("/api/quests");
+}
+
+export function apiClaimQuest(questId: string): Promise<QuestClaimResultDto> {
+  return api<QuestClaimResultDto>(`/api/quests/${questId}/claim`, { method: "POST", body: "{}" });
+}
+
+// ---------- 奇遇事件 ----------
+
+export function apiResolveEvent(eventId: string, option: "A" | "B"): Promise<EventResolveResultDto> {
+  return api<EventResolveResultDto>("/api/event/resolve", {
+    method: "POST",
+    body: JSON.stringify({ eventId, option }),
   });
 }
 

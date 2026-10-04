@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CROPS, cropCanPlantInSeason, type CropDef } from "@tavern/shared";
+import { CROPS, cropCanPlantInSeason, type CropDef, type EventPendingDto } from "@tavern/shared";
 import { useGameStore } from "../store/useGameStore";
 import {
   apiGetFarm,
@@ -9,6 +9,7 @@ import {
   apiSell,
   apiUpgradeFarm,
 } from "../net/api";
+import { EventModal } from "./EventModal";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "操作失败";
@@ -36,6 +37,7 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   const [pickerFor, setPickerFor] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingEvent, setPendingEvent] = useState<EventPendingDto | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -112,6 +114,7 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
                                   r.levelUps > 0 ? `，突破至 ${r.newLevel} 级（${r.newRealm}）！` : ""
                                 }`,
                               );
+                              if (r.pendingEvent) setPendingEvent(r.pendingEvent);
                             })
                           }
                         >
@@ -196,8 +199,7 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* 选种弹层 */}
-      {pickerFor !== null && (
-        <div className="farm-modal" onClick={() => setPickerFor(null)}>
+      {pickerFor !== null && (        <div className="farm-modal" onClick={() => setPickerFor(null)}>
           <div className="crop-picker" onClick={(e) => e.stopPropagation()}>
             <h3>选择作物（种在第 {pickerFor + 1} 块地）</h3>
             <div className="crop-list">
@@ -241,6 +243,11 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+      )}
+
+      {/* 奇遇事件弹窗 */}
+      {pendingEvent && (
+        <EventModal event={pendingEvent} onClose={() => setPendingEvent(null)} />
       )}
     </div>
   );

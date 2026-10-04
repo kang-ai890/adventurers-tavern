@@ -479,3 +479,161 @@ body,
   color: #ffd166;
 }
 
+/* ---------- 突破面板 ---------- */
+.hud-btn-gold {
+  border-color: #b8860b;
+  color: #ffd166;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.bt-panel,
+.quest-panel,
+.event-panel {
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  padding: 18px;
+  max-width: 460px;
+  width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #f5e9c8;
+}
+.bt-panel h3,
+.quest-panel h3,
+.event-panel .event-title {
+  color: #ffd166;
+  margin-bottom: 10px;
+}
+.bt-error {
+  color: #eb5757;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.bt-body p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #cbb98a;
+}
+.bt-realm {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd166;
+  margin-bottom: 12px;
+}
+.bt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #3a2f1e;
+}
+.bt-ok {
+  color: #6fcf97;
+}
+.bt-lack {
+  color: #eb5757;
+}
+.bt-comp {
+  color: #cbb98a;
+  font-size: 12px;
+}
+.bt-fail {
+  color: #f2c94c;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ---------- 任务面板 ---------- */
+.quest-card {
+  background: #1a150c;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+.quest-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.quest-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+.quest-type {
+  color: #cbb98a;
+  font-size: 12px;
+}
+.quest-bar {
+  height: 8px;
+  background: #3a2f1e;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.quest-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b8860b, #ffd166);
+  transition: width 0.3s;
+}
+.quest-reward {
+  font-size: 12px;
+  color: #cbb98a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- 事件面板 ---------- */
+.event-panel .event-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+.event-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #e8d9b0;
+  margin-bottom: 14px;
+}
+.event-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #4a3f2a;
+  background: #1a150c;
+  color: #f5e9c8;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+}
+.event-option:hover:not(:disabled) {
+  border-color: #b8860b;
+}
+.event-option span {
+  color: #cbb98a;
+  font-size: 12px;
+}
+.event-effects {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.event-effect {
+  font-size: 13px;
+  color: #cbb98a;
+}
+.event-effect b {
+  color: #ffd166;
+}
+

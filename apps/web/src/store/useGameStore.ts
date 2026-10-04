@@ -19,6 +19,7 @@ interface GameState {
   farm: FarmStateDto | null;
   farmView: boolean;
   notice: string | null; // 操作结果提示
+  activePanel: "breakthrough" | "quests" | null;
 
   setConnection: (s: ConnectionStatus) => void;
   setServerUrl: (url: string) => void;
@@ -35,6 +36,7 @@ interface GameState {
   setFarm: (f: FarmStateDto) => void;
   setFarmView: (v: boolean) => void;
   setNotice: (n: string | null) => void;
+  setActivePanel: (p: GameState["activePanel"]) => void;
   applyInventoryChange: (itemId: string, delta: number) => void;
 }
 
@@ -52,6 +54,7 @@ export const useGameStore = create<GameState>((set) => ({
   farm: null,
   farmView: false,
   notice: null,
+  activePanel: null,
 
   setConnection: (connection) => set({ connection }),
   setServerUrl: (serverUrl) => set({ serverUrl }),
@@ -88,6 +91,7 @@ export const useGameStore = create<GameState>((set) => ({
   setFarm: (farm) => set({ farm }),
   setFarmView: (farmView) => set({ farmView }),
   setNotice: (notice) => set({ notice }),
+  setActivePanel: (activePanel) => set({ activePanel }),
 
   applyInventoryChange: (itemId, delta) =>
     set((s) => {

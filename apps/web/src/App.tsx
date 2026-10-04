@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import { useTranslation } from "react-i18next";
+import { isRealmCapLevel } from "@tavern/shared";
 import { useGameStore } from "./store/useGameStore";
 import { bindSocketEvents, loginAsGuest, sendPlazaChat, SERVER_URL } from "./net/socket";
 import { apiGetFarm, apiGetPlayer, apiGuestLogin, apiLogin, apiLogout, apiRegister } from "./net/api";
 import { GameScene } from "./game/GameScene";
 import { FarmPanel } from "./components/FarmPanel";
+import { BreakthroughPanel } from "./components/BreakthroughPanel";
+import { QuestPanel } from "./components/QuestPanel";
 
 /** 游戏画布：挂载 Phaser */
 function GameCanvas() {
@@ -32,6 +35,7 @@ function Hud() {
   const connection = useGameStore((s) => s.connection);
   const farmView = useGameStore((s) => s.farmView);
   const setFarmView = useGameStore((s) => s.setFarmView);
+  const setActivePanel = useGameStore((s) => s.setActivePanel);
 
   return (
     <div className="hud">
@@ -51,6 +55,14 @@ function Hud() {
       >
         {farmView ? "🏘 回坊市" : "🏡 我的领地"}
       </button>
+      <button className="hud-btn" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("quests")}>
+        📜 委托
+      </button>
+      {player && isRealmCapLevel(player.level) && (
+        <button className="hud-btn hud-btn-gold" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("breakthrough")}>
+          ⛩️ 突破
+        </button>
+      )}
       <button
         className="hud-btn"
         onClick={() => {
@@ -256,6 +268,8 @@ function LoginOverlay() {
 
 export default function App() {
   const farmView = useGameStore((s) => s.farmView);
+  const activePanel = useGameStore((s) => s.activePanel);
+  const setActivePanel = useGameStore((s) => s.setActivePanel);
 
   useEffect(() => {
     bindSocketEvents();
@@ -275,6 +289,8 @@ export default function App() {
           <FarmPanel onClose={() => useGameStore.getState().setFarmView(false)} />
         </div>
       )}
+      {activePanel === "breakthrough" && <BreakthroughPanel onClose={() => setActivePanel(null)} />}
+      {activePanel === "quests" && <QuestPanel onClose={() => setActivePanel(null)} />}
     </div>
   );
 }
