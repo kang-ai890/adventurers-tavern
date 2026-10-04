@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run build -w @tavern/server && npm run build -w @tavern/web && npm run build -w @tavern/admin",
+    "start": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run build -w @tavern/server && node apps/server/dist/index.js",
     "typecheck": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run typecheck -w @tavern/server && npm run typecheck -w @tavern/web && npm run typecheck -w @tavern/admin",
     "dev:server": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run dev -w @tavern/server",
     "dev:web": "npm run dev -w @tavern/web",
