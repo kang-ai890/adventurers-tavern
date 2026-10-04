@@ -55,6 +55,21 @@ export async function seedContent(): Promise<void> {
       count++;
     }
   }
+  // 副本掉落特殊物品（图纸/碎片/雷击木）
+  const specialItems: Array<[string, string, string, number]> = [
+    ["bamboo_talisman", "青竹佩图纸", "🎐", 500],
+    ["immortal_blueprint_frag", "仙品图纸残页", "📜", 2_000],
+    ["tiandao_shard", "天道石碎片", "💠", 5_000],
+    ["thunderwood", "雷击木", "🪵", 800],
+  ];
+  for (const [id, name, icon, price] of specialItems) {
+    await prisma.itemDef.upsert({
+      where: { id },
+      create: { id, name, type: "material", rarity: "epic", basePrice: price, icon, description: "副本掉落" },
+      update: { name, basePrice: price, icon },
+    });
+    count++;
+  }
   console.log(`[db] 内容种子完成：${count} 种物品定义`);
 }
 

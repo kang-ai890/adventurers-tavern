@@ -87,6 +87,9 @@ model Player {
   attacksTaken  AttackLog[]  @relation("AttackVictim")
   checkins      CheckinLog[]
   treasures     TreasureLog[]
+  heroes        Hero[]
+  equipments    Equipment[]
+  battles       BattleLog[]
 
   @@index([level])
   @@index([realm])
@@ -241,6 +244,59 @@ model TreasureLog {
   player Player @relation(fields: [playerId], references: [id])
 
   @@index([playerId, date])
+}
+
+// ---------- 冒险者 ----------
+
+model Hero {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  heroId    String
+  star      Int      @default(1)
+  level     Int      @default(1)
+  exp       Int      @default(0)
+  createdAt DateTime @default(now())
+
+  player     Player      @relation(fields: [playerId], references: [id])
+  equipments Equipment[]
+
+  @@index([playerId])
+}
+
+// ---------- 装备 ----------
+
+model Equipment {
+  id        String    @id @default(uuid()) @db.Uuid
+  playerId  String    @db.Uuid
+  slot      String // weapon / armor / accessory
+  quality   String // mortal / fine / superior / epic / immortal
+  level     Int       @default(0)
+  atk       Int       @default(0)
+  def       Int       @default(0)
+  hp        Int       @default(0)
+  heroId    String?   @db.Uuid // 装备中的冒险者
+  createdAt DateTime  @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+  hero   Hero?  @relation(fields: [heroId], references: [id])
+
+  @@index([playerId])
+}
+
+// ---------- 战斗日志 ----------
+
+model BattleLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  dungeonId String
+  success   Boolean
+  rewards   Json?
+  logText   Json?
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, createdAt])
 }
 
 // ---------- 领地 ----------

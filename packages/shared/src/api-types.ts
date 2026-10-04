@@ -322,6 +322,77 @@ export interface TreasureResultDto {
   itemCount: number;
 }
 
+// ---------- 冒险者与副本 ----------
+
+export interface EquipmentDto {
+  id: string;
+  slot: "weapon" | "armor" | "accessory";
+  quality: string;
+  qualityLabel: string;
+  qualityColor: string;
+  level: number;
+  atk: number;
+  def: number;
+  hp: number;
+  heroId: string | null;
+  heroName: string | null;
+}
+
+export interface HeroDto {
+  id: string;
+  heroId: string;
+  name: string;
+  icon: string;
+  job: string;
+  star: number;
+  level: number;
+  atk: number;
+  def: number;
+  hp: number;
+  spd: number;
+  power: number;
+  equipment: EquipmentDto[];
+}
+
+export interface HeroesDto {
+  heroes: HeroDto[];
+  bag: EquipmentDto[]; // 未装备的装备
+}
+
+export interface RecruitResultDto {
+  hero: HeroDto;
+  cost: number;
+  currency: "stones" | "jades";
+}
+
+export interface DungeonDto {
+  id: string;
+  name: string;
+  icon: string;
+  unlockLevel: number;
+  unlocked: boolean;
+  recommendedPower: number;
+  energyCost: number;
+  expReward: number;
+  stonesReward: number;
+  teamPower: number; // 我方最强三人战力
+}
+
+export interface BattleResultDto {
+  success: boolean;
+  dungeonId: string;
+  dungeonName: string;
+  log: string[];
+  expGained: number;
+  stonesGained: number;
+  levelUps: number;
+  newLevel: number;
+  energyLeft: number;
+  loot: LootEntryDto[];
+  equipment: EquipmentDto | null;
+  fragment: LootEntryDto | null;
+}
+
 export interface SellResultDto {
   itemId: string;
   quantity: number;

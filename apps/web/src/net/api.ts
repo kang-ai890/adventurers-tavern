@@ -1,20 +1,25 @@
 import type {
   AttackResultDto,
   AuthResponseDto,
+  BattleResultDto,
   BreakthroughInfoDto,
   BreakthroughResultDto,
   BuildingDto,
   CheckinResultDto,
   DailyDto,
+  DungeonDto,
   EventResolveResultDto,
   FarmStateDto,
   FriendsDto,
   GatherResultDto,
   HarvestResultDto,
+  HeroDto,
+  HeroesDto,
   PlantResultDto,
   PlayerDto,
   QuestClaimResultDto,
   QuestDto,
+  RecruitResultDto,
   SellResultDto,
   ServeResultDto,
   TavernDto,
@@ -253,6 +258,45 @@ export function apiCheckin(): Promise<CheckinResultDto> {
 
 export function apiTreasure(): Promise<TreasureResultDto> {
   return api<TreasureResultDto>("/api/treasure", { method: "POST", body: "{}" });
+}
+
+// ---------- 冒险者与副本 ----------
+
+export function apiHeroes(): Promise<HeroesDto> {
+  return api<HeroesDto>("/api/heroes");
+}
+
+export function apiRecruit(currency: "stones" | "jades"): Promise<RecruitResultDto> {
+  return api<RecruitResultDto>("/api/heroes/recruit", {
+    method: "POST",
+    body: JSON.stringify({ currency }),
+  });
+}
+
+export function apiHeroLevelUp(heroId: string): Promise<HeroDto> {
+  return api<HeroDto>(`/api/heroes/${heroId}/levelup`, { method: "POST", body: "{}" });
+}
+
+export function apiDungeons(): Promise<DungeonDto[]> {
+  return api<DungeonDto[]>("/api/dungeons");
+}
+
+export function apiBattle(dungeonId: string, heroIds: string[]): Promise<BattleResultDto> {
+  return api<BattleResultDto>("/api/dungeons/battle", {
+    method: "POST",
+    body: JSON.stringify({ dungeonId, heroIds }),
+  });
+}
+
+export function apiEquip(equipmentId: string, heroId: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>(`/api/equipment/${equipmentId}/equip`, {
+    method: "POST",
+    body: JSON.stringify({ heroId }),
+  });
+}
+
+export function apiUnequip(equipmentId: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>(`/api/equipment/${equipmentId}/unequip`, { method: "POST", body: "{}" });
 }
 
 export type { BuildingDto };

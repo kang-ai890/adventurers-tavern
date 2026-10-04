@@ -789,3 +789,97 @@ body,
   color: #6fcf97;
 }
 
+/* ---------- 历练（战斗） ---------- */
+.battle-panel {
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  padding: 18px;
+  max-width: 620px;
+  width: 94vw;
+  max-height: 86vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #f5e9c8;
+}
+.battle-panel h3 {
+  color: #ffd166;
+  margin-bottom: 10px;
+}
+.hero-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.hero-card {
+  background: #1a150c;
+  border: 1px solid #4a3f2a;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.hero-selected {
+  border-color: #ffd166;
+  background: #2a2413;
+}
+.hero-icon {
+  font-size: 28px;
+}
+.hero-name {
+  font-weight: bold;
+  font-size: 13px;
+}
+.hero-star {
+  color: #ffd166;
+  font-size: 11px;
+}
+.hero-job {
+  color: #cbb98a;
+  font-size: 11px;
+}
+.hero-stats {
+  color: #cbb98a;
+  font-size: 11px;
+}
+.hero-power {
+  color: #ffd166;
+  font-size: 12px;
+}
+.hero-actions {
+  display: flex;
+  gap: 6px;
+}
+.hero-equip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.equip-chip {
+  background: #1a150c;
+  border: 1px solid #4a3f2a;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #f5e9c8;
+}
+.battle-log {
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+  font-size: 12px;
+  color: #cbb98a;
+  background: #1a150c;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+

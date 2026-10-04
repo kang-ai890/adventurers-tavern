@@ -45,6 +45,7 @@ import {
 import { bestLine, plazaStatus, refreshStallStock, socketIdsOfPlayer } from "./services/plaza.js";
 import { attack, enterWild, gather, getWild, leaveWild } from "./services/wild.js";
 import { checkin, getDaily, treasure } from "./services/daily.js";
+import { battle, equipItem, getDungeons, getHeroes, levelUpHero, recruitHero, unequipItem } from "./services/combat.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -524,6 +525,62 @@ apiRouter.post("/checkin", authRequired, wrap(async (req, res) => {
 apiRouter.post("/treasure", authRequired, wrap(async (req, res) => {
   const player = await getPlayerOrThrow(req.userId);
   res.json(await treasure(player));
+}));
+
+// ---------- 冒险者与副本 ----------
+
+apiRouter.get("/heroes", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getHeroes(player));
+}));
+
+apiRouter.post("/heroes/recruit", authRequired, wrap(async (req, res) => {
+  const body = req.body as { currency?: "stones" | "jades" };
+  if (body.currency !== "stones" && body.currency !== "jades") {
+    res.status(400).json({ error: "招募货币类型错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await recruitHero(player, body.currency));
+}));
+
+apiRouter.post("/heroes/:id/levelup", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await levelUpHero(player, req.params.id));
+}));
+
+apiRouter.get("/dungeons", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getDungeons(player));
+}));
+
+apiRouter.post("/dungeons/battle", authRequired, wrap(async (req, res) => {
+  const body = req.body as { dungeonId?: string; heroIds?: string[]; forceWin?: boolean; forceLose?: boolean };
+  if (!body.dungeonId || !Array.isArray(body.heroIds)) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  const dev = env.NODE_ENV === "development";
+  const force = dev && body.forceWin ? "win" : dev && body.forceLose ? "lose" : undefined;
+  res.json(await battle(player, body.dungeonId, body.heroIds, force));
+}));
+
+apiRouter.post("/equipment/:id/equip", authRequired, wrap(async (req, res) => {
+  const body = req.body as { heroId?: string };
+  if (!body.heroId) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  await equipItem(player, req.params.id, body.heroId);
+  res.json({ ok: true });
+}));
+
+apiRouter.post("/equipment/:id/unequip", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  await unequipItem(player, req.params.id);
+  res.json({ ok: true });
 }));
 
 // ---------- 工具函数 ----------

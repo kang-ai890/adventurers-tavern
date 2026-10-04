@@ -433,3 +433,234 @@ export const TREASURE_POOL = [
   { type: "material", weight: 20 },
   { type: "jades", weight: 10, count: 1 },
 ] as const;
+
+// ============================================================
+// 冒险者（英雄，数值设计 §8）
+// ============================================================
+
+export interface HeroDef {
+  id: string;
+  name: string;
+  icon: string;
+  job: string;
+  atk: number;
+  def: number;
+  hp: number;
+  spd: number;
+}
+
+export const HERO_DEFS: HeroDef[] = [
+  { id: "lin_jingyu", name: "林惊羽", icon: "⚔️", job: "剑修·物理输出", atk: 120, def: 60, hp: 800, spd: 100 },
+  { id: "tie_yan", name: "铁岩", icon: "🛡️", job: "体修·坦克", atk: 80, def: 120, hp: 1_600, spd: 60 },
+  { id: "su_yao", name: "苏瑶", icon: "🧪", job: "丹师·治疗", atk: 70, def: 70, hp: 900, spd: 80 },
+  { id: "bai_wuxia", name: "白无瑕", icon: "🔮", job: "阵师·控制", atk: 90, def: 100, hp: 1_000, spd: 70 },
+  { id: "a_bao", name: "阿宝", icon: "🐾", job: "御兽师·召唤", atk: 100, def: 80, hp: 950, spd: 85 },
+  { id: "mo_qianji", name: "墨千机", icon: "📜", job: "符师·群攻", atk: 130, def: 50, hp: 700, spd: 95 },
+  { id: "liu_ruyin", name: "柳如音", icon: "🎵", job: "音修·辅助", atk: 60, def: 90, hp: 850, spd: 110 },
+  { id: "luo_tianlei", name: "洛天雷", icon: "🔨", job: "器修·爆发", atk: 140, def: 55, hp: 750, spd: 90 },
+];
+
+export function getHeroDef(id: string): HeroDef | undefined {
+  return HERO_DEFS.find((h) => h.id === id);
+}
+
+/** 每级成长：攻+8 防+4 血+80 速+1 */
+export const HERO_GROWTH = { atk: 8, def: 4, hp: 80, spd: 1 } as const;
+export const HERO_MAX_STAR = 5;
+
+/** 星级属性倍率：1 + 0.3 × (星-1) */
+export function starMultiplier(star: number): number {
+  return 1 + 0.3 * (star - 1);
+}
+
+/** 英雄战力 = 攻 + 防×0.5 + 血×0.06 */
+export function heroPower(atk: number, def: number, hp: number): number {
+  return Math.round(atk + def * 0.5 + hp * 0.06);
+}
+
+export const RECRUIT_STONES_COST = 500; // 灵石招募令
+export const RECRUIT_JADES_COST = 50; // 仙玉招募
+/** 灵石招募：2星80% / 3星18% / 4星2% */
+export const RECRUIT_STONES_POOL = [
+  { star: 2, weight: 80 },
+  { star: 3, weight: 18 },
+  { star: 4, weight: 2 },
+] as const;
+/** 仙玉招募：3星50% / 4星40% / 5星10% */
+export const RECRUIT_JADES_POOL = [
+  { star: 3, weight: 50 },
+  { star: 4, weight: 40 },
+  { star: 5, weight: 10 },
+] as const;
+
+/** 英雄升级费用：等级 × 50 灵石 */
+export function heroLevelUpCost(level: number): number {
+  return level * 50;
+}
+
+// ============================================================
+// 装备（数值设计 §7.1 品质表）
+// ============================================================
+
+export type EquipmentQuality = "mortal" | "fine" | "superior" | "epic" | "immortal";
+
+export const EQUIPMENT_QUALITIES: Record<
+  EquipmentQuality,
+  { label: string; color: string; multiplier: number; maxLevel: number }
+> = {
+  mortal: { label: "凡品", color: "#d8d8d8", multiplier: 1.0, maxLevel: 5 },
+  fine: { label: "良品", color: "#6fcf97", multiplier: 1.3, maxLevel: 10 },
+  superior: { label: "上品", color: "#6fc3df", multiplier: 1.7, maxLevel: 15 },
+  epic: { label: "极品", color: "#b18cff", multiplier: 2.2, maxLevel: 20 },
+  immortal: { label: "仙品", color: "#ffd166", multiplier: 3.0, maxLevel: 25 },
+};
+
+export type EquipmentSlot = "weapon" | "armor" | "accessory";
+
+/** 部位模板（凡品基准：武器攻100 / 衣袍防60 / 饰品血300） */
+export const EQUIPMENT_SLOTS: Record<EquipmentSlot, { label: string; atk: number; def: number; hp: number }> = {
+  weapon: { label: "武器", atk: 100, def: 0, hp: 0 },
+  armor: { label: "衣袍", atk: 0, def: 60, hp: 0 },
+  accessory: { label: "饰品", atk: 0, def: 0, hp: 300 },
+};
+
+/** 装备属性 = 部位模板 × 品质倍率 × (1 + 0.05 × 强化等级) */
+export function equipmentStats(slot: EquipmentSlot, quality: EquipmentQuality, level: number) {
+  const tpl = EQUIPMENT_SLOTS[slot];
+  const q = EQUIPMENT_QUALITIES[quality];
+  const enhance = 1 + 0.05 * level;
+  return {
+    atk: Math.round(tpl.atk * q.multiplier * enhance),
+    def: Math.round(tpl.def * q.multiplier * enhance),
+    hp: Math.round(tpl.hp * q.multiplier * enhance),
+  };
+}
+
+// ============================================================
+// 副本（数值设计 §9）
+// ============================================================
+
+export interface DungeonDef {
+  id: string;
+  name: string;
+  icon: string;
+  unlockLevel: number; // 解锁境界对应等级
+  recommendedPower: number;
+  energyCost: number;
+  expReward: number;
+  stonesReward: number;
+  /** 材料掉落池（按权重） */
+  materialPool: Array<{ itemId: string; weight: number; count: number }>;
+  /** 装备掉落：概率与品质池 */
+  equipChance: number;
+  equipQualityPool: Array<{ quality: EquipmentQuality; weight: number }>;
+  /** 稀有碎片（图纸等） */
+  fragmentChance: number;
+  fragmentItemId: string;
+}
+
+export const DUNGEONS: DungeonDef[] = [
+  {
+    id: "bamboo_path", name: "青竹林小径", icon: "🎋", unlockLevel: 11, recommendedPower: 500,
+    energyCost: 10, expReward: 200, stonesReward: 150,
+    materialPool: [
+      { itemId: "black_ginseng", weight: 30, count: 1 },
+      { itemId: "copper_ore", weight: 25, count: 1 },
+      { itemId: "green_spirit_grass", weight: 20, count: 2 },
+    ],
+    equipChance: 0.2,
+    equipQualityPool: [
+      { quality: "fine", weight: 80 },
+      { quality: "superior", weight: 20 },
+    ],
+    fragmentChance: 0.05,
+    fragmentItemId: "bamboo_talisman",
+  },
+  {
+    id: "blackwind_mine", name: "黑风矿洞", icon: "⛰️", unlockLevel: 21, recommendedPower: 3_000,
+    energyCost: 12, expReward: 500, stonesReward: 300,
+    materialPool: [
+      { itemId: "purple_lingzhi", weight: 25, count: 1 },
+      { itemId: "black_iron", weight: 20, count: 1 },
+      { itemId: "star_sand", weight: 15, count: 1 },
+      { itemId: "iron_ore", weight: 30, count: 2 },
+    ],
+    equipChance: 0.18,
+    equipQualityPool: [
+      { quality: "fine", weight: 40 },
+      { quality: "superior", weight: 50 },
+      { quality: "epic", weight: 10 },
+    ],
+    fragmentChance: 0.05,
+    fragmentItemId: "bamboo_talisman",
+  },
+  {
+    id: "demon_valley", name: "万妖谷", icon: "🌋", unlockLevel: 31, recommendedPower: 12_000,
+    energyCost: 15, expReward: 1_200, stonesReward: 700,
+    materialPool: [
+      { itemId: "ice_soul_fruit", weight: 20, count: 1 },
+      { itemId: "millennium_lingzhi", weight: 12, count: 1 },
+      { itemId: "spirit_carp", weight: 25, count: 2 },
+    ],
+    equipChance: 0.15,
+    equipQualityPool: [
+      { quality: "superior", weight: 50 },
+      { quality: "epic", weight: 40 },
+      { quality: "immortal", weight: 10 },
+    ],
+    fragmentChance: 0.08,
+    fragmentItemId: "bamboo_talisman",
+  },
+  {
+    id: "blood_sea", name: "幽冥血海", icon: "🌊", unlockLevel: 41, recommendedPower: 40_000,
+    energyCost: 18, expReward: 3_000, stonesReward: 1_500,
+    materialPool: [
+      { itemId: "blood_bodhi", weight: 20, count: 1 },
+      { itemId: "dragon_fish", weight: 10, count: 1 },
+      { itemId: "century_knotweed", weight: 20, count: 2 },
+    ],
+    equipChance: 0.12,
+    equipQualityPool: [
+      { quality: "epic", weight: 60 },
+      { quality: "immortal", weight: 40 },
+    ],
+    fragmentChance: 0.08,
+    fragmentItemId: "immortal_blueprint_frag",
+  },
+  {
+    id: "thunder_ruins", name: "雷劫废墟", icon: "⚡", unlockLevel: 51, recommendedPower: 120_000,
+    energyCost: 20, expReward: 8_000, stonesReward: 4_000,
+    materialPool: [
+      { itemId: "illusion_flower", weight: 15, count: 1 },
+      { itemId: "thunderwood", weight: 15, count: 1 },
+      { itemId: "star_sand", weight: 25, count: 1 },
+    ],
+    equipChance: 0.1,
+    equipQualityPool: [
+      { quality: "epic", weight: 40 },
+      { quality: "immortal", weight: 60 },
+    ],
+    fragmentChance: 0.08,
+    fragmentItemId: "immortal_blueprint_frag",
+  },
+  {
+    id: "demon_cave", name: "天外魔窟", icon: "👹", unlockLevel: 61, recommendedPower: 350_000,
+    energyCost: 20, expReward: 20_000, stonesReward: 10_000,
+    materialPool: [
+      { itemId: "millennium_lingzhi", weight: 20, count: 1 },
+      { itemId: "star_sand", weight: 20, count: 1 },
+      { itemId: "golden_fish", weight: 15, count: 1 },
+    ],
+    equipChance: 0.1,
+    equipQualityPool: [
+      { quality: "epic", weight: 30 },
+      { quality: "immortal", weight: 70 },
+    ],
+    fragmentChance: 0.1,
+    fragmentItemId: "tiandao_shard",
+  },
+];
+
+export function getDungeon(id: string): DungeonDef | undefined {
+  return DUNGEONS.find((d) => d.id === id);
+}

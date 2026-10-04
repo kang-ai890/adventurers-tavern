@@ -12,6 +12,7 @@ import { QuestPanel } from "./components/QuestPanel";
 import { FriendsPanel } from "./components/FriendsPanel";
 import { WildPanel } from "./components/WildPanel";
 import { DailyPanel } from "./components/DailyPanel";
+import { BattlePanel } from "./components/BattlePanel";
 
 /** 游戏画布：挂载 Phaser */
 function GameCanvas() {
@@ -69,6 +70,9 @@ function Hud() {
       </button>
       <button className="hud-btn hud-btn-gold" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("daily")}>
         🎁 福利
+      </button>
+      <button className="hud-btn" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("battle")}>
+        ⚔️ 历练
       </button>
       {player && isRealmCapLevel(player.level) && (
         <button className="hud-btn hud-btn-gold" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("breakthrough")}>
@@ -380,6 +384,7 @@ export default function App() {
       {activePanel === "friends" && <FriendsPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "wild" && <WildPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "daily" && <DailyPanel onClose={() => setActivePanel(null)} />}
+      {activePanel === "battle" && <BattlePanel onClose={() => setActivePanel(null)} />}
     </div>
   );
 }
