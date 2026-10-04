@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma, type Player, type User } from "@tavern/database";
-import { expToNext, realmOfLevel, STARTING_STONES, type PlayerDto } from "@tavern/shared";
+import { expToNext, fameLevelOf, realmOfLevel, STARTING_STONES, type PlayerDto } from "@tavern/shared";
 import { env } from "./env.js";
 
 export interface AuthedRequest extends Request {
@@ -50,6 +50,8 @@ export function publicPlayer(p: Player): PlayerDto {
     jades: p.jades,
     energy: p.energy,
     fame: p.fame,
+    totalRevenue: p.totalRevenue,
+    fameLevel: fameLevelOf(p.totalRevenue),
   };
 }
 

@@ -33,6 +33,15 @@ import { addExp } from "./services/leveling.js";
 import { attemptBreakthrough, breakthroughInfo } from "./services/breakthrough.js";
 import { claimQuest, ensureDailyQuests, progressQuests, questDtos } from "./services/quests.js";
 import { maybeTriggerEvent, resolveEvent } from "./services/events.js";
+import { getTavern, serveOrder } from "./services/tavern.js";
+import {
+  acceptFriendRequest,
+  getFriends,
+  getVisitView,
+  removeFriend,
+  sendFriendRequest,
+  waterPlot,
+} from "./services/social.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -360,6 +369,80 @@ apiRouter.post("/event/resolve", authRequired, wrap(async (req, res) => {
   }
   const player = await getPlayerOrThrow(req.userId);
   res.json(await resolveEvent(player, body.eventId, body.option));
+}));
+
+// ---------- 酒馆顾客 ----------
+
+apiRouter.get("/tavern", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getTavern(player));
+}));
+
+apiRouter.post("/tavern/serve", authRequired, wrap(async (req, res) => {
+  const body = req.body as { orderId?: string };
+  if (!body.orderId) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await serveOrder(player, body.orderId));
+}));
+
+// ---------- 好友 ----------
+
+apiRouter.get("/friends", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getFriends(player));
+}));
+
+apiRouter.post("/friends/request", authRequired, wrap(async (req, res) => {
+  const body = req.body as { ref?: string };
+  const ref = body.ref?.trim();
+  if (!ref) {
+    res.status(400).json({ error: "请填写道号或玩家 ID" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await sendFriendRequest(player, ref));
+}));
+
+apiRouter.post("/friends/accept", authRequired, wrap(async (req, res) => {
+  const body = req.body as { friendId?: string };
+  if (!body.friendId) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  await acceptFriendRequest(player, body.friendId);
+  res.json({ ok: true });
+}));
+
+apiRouter.post("/friends/remove", authRequired, wrap(async (req, res) => {
+  const body = req.body as { friendId?: string };
+  if (!body.friendId) {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  await removeFriend(player, body.friendId);
+  res.json({ ok: true });
+}));
+
+// ---------- 拜访与浇水 ----------
+
+apiRouter.get("/visit/:playerId", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getVisitView(player, req.params.playerId));
+}));
+
+apiRouter.post("/visit/:playerId/water", authRequired, wrap(async (req, res) => {
+  const body = req.body as { plotIndex?: number };
+  if (typeof body.plotIndex !== "number") {
+    res.status(400).json({ error: "参数错误" });
+    return;
+  }
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await waterPlot(player, req.params.playerId, body.plotIndex));
 }));
 
 // ---------- 工具函数 ----------

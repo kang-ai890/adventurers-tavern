@@ -19,7 +19,7 @@ interface GameState {
   farm: FarmStateDto | null;
   farmView: boolean;
   notice: string | null; // 操作结果提示
-  activePanel: "breakthrough" | "quests" | null;
+  activePanel: "breakthrough" | "quests" | "friends" | null;
 
   setConnection: (s: ConnectionStatus) => void;
   setServerUrl: (url: string) => void;

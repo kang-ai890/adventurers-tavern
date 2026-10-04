@@ -41,6 +41,9 @@ model User {
 
   player Player?
 
+  friendRequestsSent     Friend[] @relation("FriendRequester")
+  friendRequestsReceived Friend[] @relation("FriendRecipient")
+
   @@index([status])
 }
 
@@ -59,8 +62,10 @@ model Player {
   energy          Int      @default(100) // 体力
   energyUpdatedAt DateTime @default(now())
   killScore       Int      @default(0) // 杀孽值，>0 为红名
-  fame            Int      @default(0) // 口碑
+  fame            Int      @default(0) // 口碑经验值
   beautyScore     Int      @default(0) // 领地美观度
+  totalRevenue    Int      @default(0) // 酒馆累计营业额（决定口碑等级）
+  lastCustomerGenAt DateTime? // 上次顾客到店结算时间
   breakthroughCooldownUntil DateTime? // 突破失败冷却
   breakthroughFails Int    @default(0) // 连续突破失败次数（成功清零）
   createdAt       DateTime @default(now())
@@ -75,6 +80,7 @@ model Player {
   quests        Quest[]
   eventLogs     EventLog[]
   breakthroughs BreakthroughLog[]
+  tavernOrders  TavernOrder[]
 
   @@index([level])
   @@index([realm])
@@ -131,6 +137,42 @@ model BreakthroughLog {
   @@index([playerId, createdAt])
 }
 
+// ---------- 好友 ----------
+
+model Friend {
+  id          String    @id @default(uuid()) @db.Uuid
+  requesterId String    @db.Uuid
+  recipientId String    @db.Uuid
+  status      String    @default("pending") // pending / accepted
+  affinity    Int       @default(0) // 好感度
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id])
+  recipient User @relation("FriendRecipient", fields: [recipientId], references: [id])
+
+  @@unique([requesterId, recipientId])
+  @@index([recipientId, status])
+}
+
+// ---------- 酒馆顾客订单 ----------
+
+model TavernOrder {
+  id           String   @id @default(uuid()) @db.Uuid
+  playerId     String   @db.Uuid
+  customerName String
+  itemId       String
+  quantity     Int      @default(1)
+  price        Int
+  status       String   @default("pending") // pending / served / expired
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@index([playerId, status])
+}
+
 // ---------- 领地 ----------
 
 model FarmPlot {
@@ -141,6 +183,8 @@ model FarmPlot {
   plantedAt  DateTime?
   readyAt    DateTime?
   wateredBy  String[]  @default([]) // 帮忙浇水的好友 id
+  waterCount Int       @default(0) // 今日被浇水次数
+  waterDate  String    @default("") // 浇水计数日期（YYYY-MM-DD）
 
   player Player @relation(fields: [playerId], references: [id])
 

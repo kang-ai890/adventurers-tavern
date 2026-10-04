@@ -5,13 +5,18 @@ import type {
   BuildingDto,
   EventResolveResultDto,
   FarmStateDto,
+  FriendsDto,
   HarvestResultDto,
   PlantResultDto,
   PlayerDto,
   QuestClaimResultDto,
   QuestDto,
   SellResultDto,
+  ServeResultDto,
+  TavernDto,
   UpgradeResultDto,
+  VisitDto,
+  WaterResultDto,
 } from "@tavern/shared";
 
 const API_BASE = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? window.location.origin;
@@ -148,6 +153,57 @@ export function apiResolveEvent(eventId: string, option: "A" | "B"): Promise<Eve
   return api<EventResolveResultDto>("/api/event/resolve", {
     method: "POST",
     body: JSON.stringify({ eventId, option }),
+  });
+}
+
+// ---------- 酒馆顾客 ----------
+
+export function apiTavern(): Promise<TavernDto> {
+  return api<TavernDto>("/api/tavern");
+}
+
+export function apiServeOrder(orderId: string): Promise<ServeResultDto> {
+  return api<ServeResultDto>("/api/tavern/serve", {
+    method: "POST",
+    body: JSON.stringify({ orderId }),
+  });
+}
+
+// ---------- 好友与拜访 ----------
+
+export function apiFriends(): Promise<FriendsDto> {
+  return api<FriendsDto>("/api/friends");
+}
+
+export function apiFriendRequest(ref: string): Promise<{ friendId: string }> {
+  return api<{ friendId: string }>("/api/friends/request", {
+    method: "POST",
+    body: JSON.stringify({ ref }),
+  });
+}
+
+export function apiFriendAccept(friendId: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>("/api/friends/accept", {
+    method: "POST",
+    body: JSON.stringify({ friendId }),
+  });
+}
+
+export function apiFriendRemove(friendId: string): Promise<{ ok: boolean }> {
+  return api<{ ok: boolean }>("/api/friends/remove", {
+    method: "POST",
+    body: JSON.stringify({ friendId }),
+  });
+}
+
+export function apiVisit(playerId: string): Promise<VisitDto> {
+  return api<VisitDto>(`/api/visit/${playerId}`);
+}
+
+export function apiWater(playerId: string, plotIndex: number): Promise<WaterResultDto> {
+  return api<WaterResultDto>(`/api/visit/${playerId}/water`, {
+    method: "POST",
+    body: JSON.stringify({ plotIndex }),
   });
 }
 

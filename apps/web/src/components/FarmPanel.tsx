@@ -10,6 +10,7 @@ import {
   apiUpgradeFarm,
 } from "../net/api";
 import { EventModal } from "./EventModal";
+import { TavernSection } from "./TavernSection";
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : "操作失败";
@@ -89,6 +90,12 @@ export function FarmPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="farm-body">
+        {/* 酒馆顾客 */}
+        <div className="farm-section">
+          <h3>🍵 酒馆</h3>
+          <TavernSection />
+        </div>
+
         {/* 灵田 */}
         <div className="farm-section">
           <h3>🌱 灵田</h3>

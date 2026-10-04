@@ -9,6 +9,7 @@ import { GameScene } from "./game/GameScene";
 import { FarmPanel } from "./components/FarmPanel";
 import { BreakthroughPanel } from "./components/BreakthroughPanel";
 import { QuestPanel } from "./components/QuestPanel";
+import { FriendsPanel } from "./components/FriendsPanel";
 
 /** 游戏画布：挂载 Phaser */
 function GameCanvas() {
@@ -57,6 +58,9 @@ function Hud() {
       </button>
       <button className="hud-btn" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("quests")}>
         📜 委托
+      </button>
+      <button className="hud-btn" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("friends")}>
+        👥 好友
       </button>
       {player && isRealmCapLevel(player.level) && (
         <button className="hud-btn hud-btn-gold" style={{ pointerEvents: "auto" }} onClick={() => setActivePanel("breakthrough")}>
@@ -291,6 +295,7 @@ export default function App() {
       )}
       {activePanel === "breakthrough" && <BreakthroughPanel onClose={() => setActivePanel(null)} />}
       {activePanel === "quests" && <QuestPanel onClose={() => setActivePanel(null)} />}
+      {activePanel === "friends" && <FriendsPanel onClose={() => setActivePanel(null)} />}
     </div>
   );
 }

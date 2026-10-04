@@ -263,3 +263,55 @@ export function getEvent(id: string): EventDef | undefined {
 
 /** 奇遇触发概率（每次收获） */
 export const EVENT_TRIGGER_CHANCE = 0.18;
+
+// ============================================================
+// 顾客与口碑（数值设计 §16.1）
+// ============================================================
+
+/** 升级到下一口碑等级所需的累计营业额（灵石，按序累计） */
+export const FAME_THRESHOLDS = [
+  500, 1_500, 4_000, 10_000, 25_000, 60_000, 120_000, 250_000, 500_000, 1_000_000, 2_000_000,
+] as const;
+
+/** 各口碑等级（0~10）的客流（人/小时）与客单价（灵石） */
+export const FAME_CUSTOMERS_PER_HOUR = [6, 8, 10, 12, 15, 18, 22, 26, 30, 36, 45] as const;
+export const FAME_AVG_SPEND = [20, 30, 45, 60, 80, 100, 130, 160, 200, 250, 320] as const;
+
+export function fameLevelOf(totalRevenue: number): number {
+  let level = 0;
+  for (const t of FAME_THRESHOLDS) {
+    if (totalRevenue >= t) level++;
+    else break;
+  }
+  return level;
+}
+
+/** 顾客点单数量：客单价 / 菜品单价，限制 1~9 份 */
+export function customerOrderQuantity(avgSpend: number, sellPrice: number): number {
+  return Math.max(1, Math.min(9, Math.round(avgSpend / sellPrice)));
+}
+
+/** NPC 顾客名池（修仙味） */
+export const NPC_NAMES = [
+  "赶路的剑修", "采药的老翁", "游方的僧人", "佩刀的女侠", "醉醺醺的老道",
+  "风尘仆仆的镖师", "卖唱的小童", "扫地的杂役", "过路的商贾", "避雨的猎户",
+  "进香的香客", "寻人的书生", "挑柴的樵夫", "撑伞的姑娘", "牵马的马夫",
+] as const;
+
+/** 酒馆订单：未招待的订单超时（分钟） */
+export const TAVERN_ORDER_TTL_MINUTES = 60;
+/** 同时最多挂着的订单数 */
+export const TAVERN_MAX_PENDING_ORDERS = 12;
+
+// ============================================================
+// 好友与浇水（数值设计 §2.3）
+// ============================================================
+
+/** 每次浇水加速：剩余时间 -5% */
+export const WATER_SPEEDUP = 0.05;
+/** 单块地每日可被浇水次数 */
+export const WATER_MAX_PER_PLOT_PER_DAY = 5;
+/** 浇水者奖励（灵石） */
+export const WATERER_REWARD_STONES = 10;
+/** 浇水者好感度收益 */
+export const WATERER_AFFINITY_GAIN = 2;

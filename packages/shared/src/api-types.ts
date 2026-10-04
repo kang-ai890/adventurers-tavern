@@ -14,6 +14,8 @@ export interface PlayerDto {
   jades: number;
   energy: number;
   fame: number;
+  totalRevenue: number;
+  fameLevel: number;
 }
 
 export interface FarmPlotDto {
@@ -154,6 +156,88 @@ export interface QuestClaimResultDto {
   rewardExp: number;
   levelUps: number;
   newLevel: number;
+}
+
+// ---------- 酒馆顾客与口碑 ----------
+
+export interface TavernOrderDto {
+  id: string;
+  customerName: string;
+  itemId: string;
+  itemName: string;
+  itemIcon: string;
+  quantity: number;
+  price: number;
+  have: number; // 背包持有量
+  expiresAt: string;
+}
+
+export interface TavernDto {
+  fameLevel: number;
+  customersPerHour: number;
+  avgSpend: number;
+  totalRevenue: number;
+  revenueToNext: number | null; // 满级为 null
+  orders: TavernOrderDto[];
+}
+
+export interface ServeResultDto {
+  orderId: string;
+  customerName: string;
+  itemName: string;
+  quantity: number;
+  stonesGained: number;
+  stonesNow: number;
+  totalRevenue: number;
+  fameLevel: number;
+  levelUps: number;
+}
+
+// ---------- 好友与拜访 ----------
+
+export interface FriendDto {
+  friendId: string; // Friend 行 id
+  playerId: string;
+  nickname: string;
+  realm: string;
+  level: number;
+  affinity: number;
+}
+
+export interface FriendsDto {
+  friends: FriendDto[];
+  pendingIn: Array<{ friendId: string; playerId: string; nickname: string }>;
+  pendingOut: Array<{ friendId: string; playerId: string; nickname: string }>;
+}
+
+export interface VisitPlotDto {
+  plotIndex: number;
+  cropId: string | null;
+  cropName: string | null;
+  cropIcon: string | null;
+  readyAt: string | null;
+  ready: boolean;
+  waterCountToday: number;
+}
+
+export interface VisitDto {
+  playerId: string;
+  nickname: string;
+  realm: string;
+  level: number;
+  fameLevel: number;
+  farmLevel: number;
+  season: string;
+  plots: VisitPlotDto[];
+}
+
+export interface WaterResultDto {
+  plotIndex: number;
+  speedupPercent: number;
+  newReadyAt: string | null;
+  rewardStones: number;
+  affinityGained: number;
+  waterCountToday: number;
 }
 
 export interface SellResultDto {

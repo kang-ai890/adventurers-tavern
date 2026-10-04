@@ -637,3 +637,43 @@ body,
   color: #ffd166;
 }
 
+/* ---------- 酒馆与好友 ---------- */
+.tavern-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.friends-panel {
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  padding: 18px;
+  max-width: 520px;
+  width: 94vw;
+  max-height: 84vh;
+  overflow-y: auto;
+  text-align: center;
+  color: #f5e9c8;
+}
+.friends-panel h3 {
+  color: #ffd166;
+  margin-bottom: 10px;
+}
+.friend-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.friend-group {
+  margin-bottom: 12px;
+}
+.friend-group-title {
+  font-size: 13px;
+  color: #cbb98a;
+  margin-bottom: 6px;
+  text-align: left;
+}
+
