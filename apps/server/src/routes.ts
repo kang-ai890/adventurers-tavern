@@ -46,6 +46,7 @@ import { bestLine, plazaStatus, refreshStallStock, socketIdsOfPlayer } from "./s
 import { attack, enterWild, gather, getWild, leaveWild } from "./services/wild.js";
 import { checkin, getDaily, treasure } from "./services/daily.js";
 import { battle, equipItem, getDungeons, getHeroes, levelUpHero, recruitHero, unequipItem } from "./services/combat.js";
+import { getAchievements, getCodex } from "./services/collection.js";
 import { env } from "./env.js";
 
 export const apiRouter = Router();
@@ -581,6 +582,18 @@ apiRouter.post("/equipment/:id/unequip", authRequired, wrap(async (req, res) => 
   const player = await getPlayerOrThrow(req.userId);
   await unequipItem(player, req.params.id);
   res.json({ ok: true });
+}));
+
+// ---------- 图鉴与成就 ----------
+
+apiRouter.get("/codex", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getCodex(player));
+}));
+
+apiRouter.get("/achievements", authRequired, wrap(async (req, res) => {
+  const player = await getPlayerOrThrow(req.userId);
+  res.json(await getAchievements(player));
 }));
 
 // ---------- 工具函数 ----------

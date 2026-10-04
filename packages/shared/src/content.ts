@@ -664,3 +664,88 @@ export const DUNGEONS: DungeonDef[] = [
 export function getDungeon(id: string): DungeonDef | undefined {
   return DUNGEONS.find((d) => d.id === id);
 }
+
+// ============================================================
+// 图鉴与成就（数值设计 §17，阶段9 实现作物/材料两类 + 14 个成就）
+// ============================================================
+
+export interface CodexCategoryDef {
+  key: string;
+  label: string;
+  icon: string;
+  itemIds: string[];
+}
+
+export const CODEX_CATEGORIES: CodexCategoryDef[] = [
+  {
+    key: "crops",
+    label: "作物图鉴",
+    icon: "🌾",
+    itemIds: CROPS.map((c) => c.id),
+  },
+  {
+    key: "materials",
+    label: "采集图鉴",
+    icon: "⛏️",
+    itemIds: [
+      ...Object.values(GATHER_TABLES).flatMap((t) => t.items.map((i) => i.itemId)),
+      "bamboo_talisman",
+      "immortal_blueprint_frag",
+      "tiandao_shard",
+      "thunderwood",
+    ],
+  },
+];
+
+/** 图鉴收集奖励梯度（数值设计 §17.1，按比例达成时各发一次） */
+export const CODEX_TIERS = [
+  { pct: 0.1, stones: 500, jades: 0 },
+  { pct: 0.25, stones: 2_000, jades: 10 },
+  { pct: 0.5, stones: 5_000, jades: 20 },
+  { pct: 0.75, stones: 10_000, jades: 30 },
+  { pct: 1.0, stones: 20_000, jades: 50 },
+] as const;
+
+/** 收集度达标所需数量 = ceil(总数 × 比例) */
+export function codexTierCount(total: number, pct: number): number {
+  return Math.ceil(total * pct);
+}
+
+export type AchievementCondition =
+  | { type: "newcomer" } // 初来乍到：创建角色
+  | { type: "revenue"; amount: number } // 累计营业额
+  | { type: "level"; level: number } // 达到等级
+  | { type: "battleWins"; count: number } // 副本通关次数
+  | { type: "bambooWins"; count: number } // 青竹林小径通关次数
+  | { type: "redHunts"; count: number } // 讨伐红名次数
+  | { type: "codexCrops"; count: number } // 作物图鉴解锁数
+  | { type: "friends"; count: number }; // 好友数
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  condition: AchievementCondition;
+  rewardStones: number;
+  rewardJades: number;
+}
+
+export const ACHIEVEMENT_DEFS: AchievementDef[] = [
+  { id: "newcomer", name: "初来乍到", desc: "踏入修仙界，创建角色", icon: "🏮", condition: { type: "newcomer" }, rewardStones: 100, rewardJades: 0 },
+  { id: "first_gold", name: "第一桶金", desc: "酒馆累计营业额达到 1,000", icon: "💰", condition: { type: "revenue", amount: 1_000 }, rewardStones: 200, rewardJades: 0 },
+  { id: "small_profit", name: "薄利多销", desc: "酒馆累计营业额达到 5,000", icon: "🧮", condition: { type: "revenue", amount: 5_000 }, rewardStones: 500, rewardJades: 0 },
+  { id: "rich_overnight", name: "一夜暴富", desc: "酒馆累计营业额达到 10,000", icon: "💎", condition: { type: "revenue", amount: 10_000 }, rewardStones: 500, rewardJades: 5 },
+  { id: "foundation", name: "登堂入室", desc: "突破至筑基（11 级）", icon: "⛰️", condition: { type: "level", level: 11 }, rewardStones: 1_000, rewardJades: 0 },
+  { id: "golden_core", name: "金丹大道", desc: "突破至金丹（21 级）", icon: "🔶", condition: { type: "level", level: 21 }, rewardStones: 5_000, rewardJades: 0 },
+  { id: "nascent_soul", name: "元婴出窍", desc: "突破至元婴（31 级）", icon: "👻", condition: { type: "level", level: 31 }, rewardStones: 0, rewardJades: 20 },
+  { id: "dungeon_regular", name: "副本常客", desc: "通关任意副本 5 次", icon: "⚔️", condition: { type: "battleWins", count: 5 }, rewardStones: 2_000, rewardJades: 0 },
+  { id: "bamboo_killer", name: "竹妖杀手", desc: "通关青竹林小径 3 次", icon: "🎋", condition: { type: "bambooWins", count: 3 }, rewardStones: 300, rewardJades: 0 },
+  { id: "night_walker", name: "夜行者", desc: "讨伐红名 1 次", icon: "🌙", condition: { type: "redHunts", count: 1 }, rewardStones: 500, rewardJades: 0 },
+  { id: "shennong", name: "神农尝百草", desc: "集齐全部 13 种作物图鉴", icon: "🌿", condition: { type: "codexCrops", count: 13 }, rewardStones: 0, rewardJades: 30 },
+  { id: "popular", name: "四海皆友", desc: "拥有 5 位好友", icon: "👥", condition: { type: "friends", count: 5 }, rewardStones: 800, rewardJades: 0 },
+];
+
+export function getAchievementDef(id: string): AchievementDef | undefined {
+  return ACHIEVEMENT_DEFS.find((a) => a.id === id);
+}

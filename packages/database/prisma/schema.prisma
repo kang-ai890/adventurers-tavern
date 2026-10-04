@@ -90,6 +90,9 @@ model Player {
   heroes        Hero[]
   equipments    Equipment[]
   battles       BattleLog[]
+  codexEntries  CodexEntry[]
+  codexClaims   CodexClaim[]
+  achievements  Achievement[]
 
   @@index([level])
   @@index([realm])
@@ -297,6 +300,45 @@ model BattleLog {
   player Player @relation(fields: [playerId], references: [id])
 
   @@index([playerId, createdAt])
+}
+
+// ---------- 图鉴 ----------
+
+model CodexEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  category  String
+  itemId    String
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, category, itemId])
+}
+
+model CodexClaim {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @db.Uuid
+  category  String
+  pct       Float
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, category, pct])
+}
+
+// ---------- 成就 ----------
+
+model Achievement {
+  id            String   @id @default(uuid()) @db.Uuid
+  playerId      String   @db.Uuid
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, achievementId])
 }
 
 // ---------- 领地 ----------

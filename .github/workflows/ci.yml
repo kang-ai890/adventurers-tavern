@@ -86,3 +86,5 @@ jobs:
         run: node scripts/e2e-stage7.mjs
       - name: 阶段8 冒险者与副本
         run: node scripts/e2e-stage8.mjs
+      - name: 阶段9 图鉴与成就
+        run: node scripts/e2e-stage9.mjs

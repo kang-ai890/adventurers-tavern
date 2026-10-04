@@ -393,6 +393,48 @@ export interface BattleResultDto {
   fragment: LootEntryDto | null;
 }
 
+// ---------- 图鉴与成就 ----------
+
+export interface CodexCategoryDto {
+  key: string;
+  label: string;
+  icon: string;
+  unlocked: number;
+  total: number;
+  pct: number; // 收集百分比（0~100）
+  claimedTiers: number[]; // 已领取的档位（百分比值）
+}
+
+export interface CodexRewardDto {
+  category: string;
+  pct: number;
+  stones: number;
+  jades: number;
+}
+
+export interface CodexDto {
+  categories: CodexCategoryDto[];
+  newlyRewarded: CodexRewardDto[];
+}
+
+export interface AchievementDto {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+  unlocked: boolean;
+  unlockedAt: string | null;
+  rewardStones: number;
+  rewardJades: number;
+}
+
+export interface AchievementsDto {
+  achievements: AchievementDto[];
+  unlockedCount: number;
+  total: number;
+  newlyUnlocked: string[];
+}
+
 export interface SellResultDto {
   itemId: string;
   quantity: number;

@@ -1,4 +1,5 @@
 import type {
+  AchievementsDto,
   AttackResultDto,
   AuthResponseDto,
   BattleResultDto,
@@ -6,6 +7,7 @@ import type {
   BreakthroughResultDto,
   BuildingDto,
   CheckinResultDto,
+  CodexDto,
   DailyDto,
   DungeonDto,
   EventResolveResultDto,
@@ -297,6 +299,16 @@ export function apiEquip(equipmentId: string, heroId: string): Promise<{ ok: boo
 
 export function apiUnequip(equipmentId: string): Promise<{ ok: boolean }> {
   return api<{ ok: boolean }>(`/api/equipment/${equipmentId}/unequip`, { method: "POST", body: "{}" });
+}
+
+// ---------- 图鉴与成就 ----------
+
+export function apiCodex(): Promise<CodexDto> {
+  return api<CodexDto>("/api/codex");
+}
+
+export function apiAchievements(): Promise<AchievementsDto> {
+  return api<AchievementsDto>("/api/achievements");
 }
 
 export type { BuildingDto };
