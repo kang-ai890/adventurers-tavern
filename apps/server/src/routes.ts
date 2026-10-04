@@ -3,8 +3,10 @@ import { prisma } from "@tavern/database";
 import {
   FARM_BUILDING,
   GuestLoginSchema,
+  LoginSchema,
   PlantSchema,
   HarvestSchema,
+  RegisterSchema,
   SellSchema,
   UpgradeBuildingSchema,
   cropCanPlantInSeason,
@@ -20,7 +22,15 @@ import {
   type SellResultDto,
   type UpgradeResultDto,
 } from "@tavern/shared";
-import { authRequired, getPlayerOrThrow, guestLogin, publicPlayer, type AuthedRequest } from "./auth.js";
+import {
+  authRequired,
+  getPlayerOrThrow,
+  guestLogin,
+  loginAccount,
+  publicPlayer,
+  registerAccount,
+  type AuthedRequest,
+} from "./auth.js";
 
 export const apiRouter = Router();
 
@@ -40,6 +50,18 @@ function wrap(handler: (req: AuthedRequest, res: import("express").Response) => 
 apiRouter.post("/auth/guest", wrap(async (req, res) => {
   const body = GuestLoginSchema.parse(req.body);
   const result = await guestLogin(body.deviceToken, body.nickname);
+  res.json(result);
+}));
+
+apiRouter.post("/auth/register", wrap(async (req, res) => {
+  const body = RegisterSchema.parse(req.body);
+  const result = await registerAccount(body);
+  res.json(result);
+}));
+
+apiRouter.post("/auth/login", wrap(async (req, res) => {
+  const body = LoginSchema.parse(req.body);
+  const result = await loginAccount(body.username, body.password);
   res.json(result);
 }));
 

@@ -1,11 +1,18 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { prisma, type Player } from "@tavern/database";
+import bcrypt from "bcryptjs";
+import { prisma, type Player, type User } from "@tavern/database";
 import { expToNext, realmOfLevel, STARTING_STONES, type PlayerDto } from "@tavern/shared";
 import { env } from "./env.js";
 
 export interface AuthedRequest extends Request {
   userId: string;
+}
+
+export function httpError(status: number, message: string): Error {
+  const err = new Error(message) as Error & { status?: number };
+  err.status = status;
+  return err;
 }
 
 export function signToken(userId: string): string {
@@ -46,6 +53,22 @@ export function publicPlayer(p: Player): PlayerDto {
   };
 }
 
+function assertNotBanned(user: User) {
+  if (user.status === "BANNED" || (user.bannedUntil && user.bannedUntil.getTime() > Date.now())) {
+    const until = user.bannedUntil ? `至 ${user.bannedUntil.toISOString().slice(0, 10)}` : "";
+    throw httpError(403, `该账号已被封禁${until}`);
+  }
+}
+
+/** 确保玩家档存在（历史账号兜底） */
+async function ensurePlayer(userId: string, nickname: string): Promise<Player> {
+  const existing = await prisma.player.findUnique({ where: { userId } });
+  if (existing) return existing;
+  return prisma.player.create({
+    data: { userId, nickname, avatar: "default", stones: STARTING_STONES },
+  });
+}
+
 /** 游客登录：按设备凭证找/建账号，返回 JWT 与玩家数据 */
 export async function guestLogin(deviceToken: string, nickname?: string) {
   let user = await prisma.user.findUnique({ where: { deviceToken } });
@@ -67,6 +90,7 @@ export async function guestLogin(deviceToken: string, nickname?: string) {
       },
     });
   } else {
+    assertNotBanned(user);
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -94,13 +118,72 @@ export async function guestLogin(deviceToken: string, nickname?: string) {
   return { token: signToken(user.id), player: publicPlayer(player) };
 }
 
+/** 注册：无 deviceToken 建新号；带 deviceToken 则游客转正（数据全部保留） */
+export async function registerAccount(input: { username: string; password: string; deviceToken?: string }) {
+  const passwordHash = await bcrypt.hash(input.password, 10);
+
+  const taken = await prisma.user.findUnique({ where: { username: input.username } });
+  if (taken) throw httpError(409, "这个道号已被占用，换一个吧");
+
+  let user: User | null = null;
+
+  if (input.deviceToken) {
+    const guest = await prisma.user.findUnique({ where: { deviceToken: input.deviceToken } });
+    if (guest && guest.isGuest) {
+      // 游客转正：同一 user_id，玩家/背包/灵田数据无缝保留
+      user = await prisma.user.update({
+        where: { id: guest.id },
+        data: { username: input.username, passwordHash, isGuest: false },
+      });
+    }
+  }
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        username: input.username,
+        passwordHash,
+        isGuest: false,
+        lastLoginAt: new Date(),
+        player: {
+          create: { nickname: input.username, avatar: "default", stones: STARTING_STONES },
+        },
+      },
+    });
+  }
+
+  const player = await ensurePlayer(user.id, input.username);
+  // 游客默认名（游客XXXX）转正后换成道号；玩家自定义昵称保留
+  if (player.nickname.startsWith("游客")) {
+    await prisma.player.update({
+      where: { id: player.id },
+      data: { nickname: input.username },
+    });
+    player.nickname = input.username;
+  }
+  return { token: signToken(user.id), player: publicPlayer(player) };
+}
+
+/** 账号密码登录（多设备同步：任意设备登录同一账号拿到同一份存档） */
+export async function loginAccount(username: string, password: string) {
+  const user = await prisma.user.findUnique({ where: { username } });
+  if (!user || user.isGuest || !user.passwordHash) {
+    throw httpError(401, "账号或密码错误");
+  }
+  assertNotBanned(user);
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok) throw httpError(401, "账号或密码错误");
+
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  const player = await ensurePlayer(user.id, user.username ?? "修士");
+  return { token: signToken(user.id), player: publicPlayer(player) };
+}
+
 /** 按 userId 取玩家（不存在则 404 错误） */
 export async function getPlayerOrThrow(userId: string) {
   const player = await prisma.player.findUnique({ where: { userId } });
   if (!player) {
-    const err = new Error("玩家不存在");
-    (err as Error & { status?: number }).status = 404;
-    throw err;
+    throw httpError(404, "玩家不存在");
   }
   return player;
 }

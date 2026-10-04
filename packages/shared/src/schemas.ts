@@ -42,6 +42,12 @@ export const GuestLoginSchema = z.object({
   nickname: z.string().trim().min(1).max(16).optional(),
 });
 
+/** 账号密码登录请求 */
+export const LoginSchema = z.object({
+  username: z.string().trim().min(2).max(16),
+  password: z.string().min(6).max(64),
+});
+
 /** 种植请求 */
 export const PlantSchema = z.object({
   plotIndex: z.number().int().min(0).max(63),

@@ -2,11 +2,13 @@ import { create } from "zustand";
 import type { ChatMessage, FarmStateDto, InventoryItemDto, PlazaPlayer, PlayerDto } from "@tavern/shared";
 
 export type ConnectionStatus = "connecting" | "online" | "offline";
+export type AccountType = "guest" | "registered" | null;
 
 interface GameState {
   connection: ConnectionStatus;
   serverUrl: string;
   loggedIn: boolean;
+  accountType: AccountType;
   playerId: string | null;
   nickname: string;
   nearby: Record<string, PlazaPlayer>;
@@ -22,6 +24,7 @@ interface GameState {
   setServerUrl: (url: string) => void;
   setNickname: (name: string) => void;
   setLoggedIn: (v: boolean) => void;
+  setAccountType: (t: AccountType) => void;
   onLoginResult: (ok: boolean) => void;
   upsertPlayers: (players: PlazaPlayer[]) => void;
   movePlayer: (id: string, x: number, y: number, direction: PlazaPlayer["direction"]) => void;
@@ -39,6 +42,7 @@ export const useGameStore = create<GameState>((set) => ({
   connection: "connecting",
   serverUrl: "",
   loggedIn: false,
+  accountType: null,
   playerId: null,
   nickname: "",
   nearby: {},
@@ -53,6 +57,7 @@ export const useGameStore = create<GameState>((set) => ({
   setServerUrl: (serverUrl) => set({ serverUrl }),
   setNickname: (nickname) => set({ nickname }),
   setLoggedIn: (loggedIn) => set({ loggedIn }),
+  setAccountType: (accountType) => set({ accountType }),
   onLoginResult: (ok) => set({ loggedIn: ok }),
 
   upsertPlayers: (players) =>

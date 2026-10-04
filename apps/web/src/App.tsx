@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import { useTranslation } from "react-i18next";
 import { useGameStore } from "./store/useGameStore";
 import { bindSocketEvents, loginAsGuest, sendPlazaChat, SERVER_URL } from "./net/socket";
-import { apiGetFarm, apiGetPlayer, apiGuestLogin } from "./net/api";
+import { apiGetFarm, apiGetPlayer, apiGuestLogin, apiLogin, apiLogout, apiRegister } from "./net/api";
 import { GameScene } from "./game/GameScene";
 import { FarmPanel } from "./components/FarmPanel";
 
@@ -50,6 +50,16 @@ function Hud() {
         style={{ pointerEvents: "auto" }}
       >
         {farmView ? "🏘 回坊市" : "🏡 我的领地"}
+      </button>
+      <button
+        className="hud-btn"
+        onClick={() => {
+          apiLogout();
+          window.location.reload();
+        }}
+        style={{ pointerEvents: "auto" }}
+      >
+        🚪 退出
       </button>
       <div className="hud-status">
         <span className={`dot ${connection}`} />
@@ -126,7 +136,7 @@ function WakeOverlay() {
   );
 }
 
-/** 登录面板：游客快速进入（REST 建号 + Socket 广场） */
+/** 登录面板：游客 / 注册 / 登录 三模式 */
 function LoginOverlay() {
   const { t } = useTranslation();
   const loggedIn = useGameStore((s) => s.loggedIn);
@@ -134,51 +144,111 @@ function LoginOverlay() {
   const setPlayer = useGameStore((s) => s.setPlayer);
   const setFarm = useGameStore((s) => s.setFarm);
   const setLoggedIn = useGameStore((s) => s.setLoggedIn);
+  const setAccountType = useGameStore((s) => s.setAccountType);
   const setNotice = useGameStore((s) => s.setNotice);
+
+  const [mode, setMode] = useState<"guest" | "register" | "login">("guest");
   const [nickname, setNickname] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (loggedIn || connection !== "online") return null;
+
+  const finishLogin = async (kind: "guest" | "registered", notice: string) => {
+    const [p, f] = await Promise.all([apiGetPlayer(), apiGetFarm()]);
+    setPlayer(p);
+    setFarm(f);
+    setAccountType(kind);
+    setLoggedIn(true);
+    loginAsGuest(p.nickname); // Socket 广场占位（阶段 5 接入真实身份）
+    setNotice(notice);
+  };
 
   const enter = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      let deviceToken = localStorage.getItem("tavern.deviceToken");
-      if (!deviceToken) {
-        deviceToken = `d-${crypto.randomUUID()}`;
-        localStorage.setItem("tavern.deviceToken", deviceToken);
+      const deviceToken = localStorage.getItem("tavern.deviceToken") ?? undefined;
+      if (mode === "guest") {
+        const d = deviceToken ?? `d-${crypto.randomUUID()}`;
+        if (!deviceToken) localStorage.setItem("tavern.deviceToken", d);
+        await apiGuestLogin(d, nickname.trim() || undefined);
+        await finishLogin("guest", "进入酒馆，祝掌柜生意兴隆！");
+      } else if (mode === "register") {
+        await apiRegister(username.trim(), password, deviceToken);
+        await finishLogin(
+          "registered",
+          deviceToken ? "转正成功！游客数据已全部保留 🎉" : "注册成功！欢迎踏入修仙界",
+        );
+      } else {
+        await apiLogin(username.trim(), password);
+        await finishLogin("registered", "欢迎回来，道友！");
       }
-      await apiGuestLogin(deviceToken, nickname.trim() || undefined);
-      const [p, f] = await Promise.all([apiGetPlayer(), apiGetFarm()]);
-      setPlayer(p);
-      setFarm(f);
-      setLoggedIn(true);
-      loginAsGuest(p.nickname); // Socket 广场占位（阶段 5 接入真实身份）
-      setNotice(`欢迎回来，${p.nickname}！初始灵石 ${p.stones}`);
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : "进入失败");
+      setNotice(e instanceof Error ? e.message : "操作失败");
     } finally {
       setBusy(false);
     }
   };
+
+  const tabs: Array<{ key: "guest" | "register" | "login"; label: string }> = [
+    { key: "guest", label: t("login.guest") },
+    { key: "register", label: "注册账号" },
+    { key: "login", label: "登录" },
+  ];
 
   return (
     <div className="overlay">
       <div className="overlay-card">
         <div className="overlay-icon">🏮</div>
         <h2>{t("login.title")}</h2>
-        <input
-          className="login-input"
-          value={nickname}
-          placeholder={t("login.nickname")}
-          maxLength={16}
-          onChange={(e) => setNickname(e.target.value)}
-        />
+        <div className="login-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={`login-tab ${mode === tab.key ? "login-tab-active" : ""}`}
+              onClick={() => setMode(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {mode === "guest" && (
+          <input
+            className="login-input"
+            value={nickname}
+            placeholder={t("login.nickname")}
+            maxLength={16}
+            onChange={(e) => setNickname(e.target.value)}
+          />
+        )}
+        {(mode === "register" || mode === "login") && (
+          <>
+            <input
+              className="login-input"
+              value={username}
+              placeholder="道号（2-16位中英文数字）"
+              maxLength={16}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+            <input
+              className="login-input"
+              type="password"
+              value={password}
+              placeholder="密码（至少6位）"
+              maxLength={64}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void enter()}
+            />
+          </>
+        )}
         <button className="btn-primary" disabled={busy} onClick={() => void enter()}>
-          {t("login.guest")}
+          {busy ? "请稍候…" : mode === "guest" ? t("login.guest") : mode === "register" ? "注册并进入" : "登录"}
         </button>
-        <div className="login-hint">{t("login.register")}</div>
+        <div className="login-hint">
+          {mode === "guest" ? "游客数据存于本机，注册后可转正保留" : mode === "register" ? "本机有游客档案时将自动转正（数据保留）" : "任意设备登录同一账号，存档互通"}
+        </div>
       </div>
     </div>
   );

@@ -50,7 +50,10 @@ npm run dev:web
 npm run dev:admin
 ```
 
-**自动化测试**：`npm run test:e2e`（需先启动本地数据库和后端，覆盖"登录→种植→收获→出售→升级守卫"全流程）。
+**自动化测试**：
+- `npm run test:e2e`：阶段 1 经营闭环（登录→种植→收获→出售→升级守卫）
+- `node scripts/e2e-stage2.mjs`：阶段 2 账号系统（注册/登录/多设备同步/游客转正）
+- 均需先启动本地数据库和后端
 
 > 本地库为嵌入式 PGlite（单会话复用），连接串需带 `pgbouncer=true&connection_limit=1`（apps/server/.env 已配置）；生产环境（Neon）用标准连接串。
 

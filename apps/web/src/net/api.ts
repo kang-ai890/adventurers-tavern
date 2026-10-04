@@ -49,6 +49,34 @@ export async function apiGuestLogin(deviceToken: string, nickname?: string): Pro
   return result;
 }
 
+/** 注册：携带 deviceToken 时自动执行游客转正（数据保留） */
+export async function apiRegister(
+  username: string,
+  password: string,
+  deviceToken?: string,
+): Promise<AuthResponseDto> {
+  const result = await api<AuthResponseDto>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ username, password, deviceToken }),
+  });
+  setToken(result.token);
+  return result;
+}
+
+export async function apiLogin(username: string, password: string): Promise<AuthResponseDto> {
+  const result = await api<AuthResponseDto>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+  setToken(result.token);
+  return result;
+}
+
+export function apiLogout() {
+  token = null;
+  localStorage.removeItem("tavern.token");
+}
+
 // ---------- 查询 ----------
 
 export function apiGetPlayer(): Promise<PlayerDto> {
