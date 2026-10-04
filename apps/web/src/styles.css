@@ -1,0 +1,194 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+.app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Zpix", "Microsoft YaHei", monospace, sans-serif;
+  background: #1a1a1a;
+}
+
+.game-canvas {
+  position: absolute;
+  inset: 0;
+}
+.game-canvas canvas {
+  display: block;
+}
+
+/* ---------- HUD ---------- */
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(20, 16, 10, 0.9), rgba(20, 16, 10, 0));
+  color: #f5e9c8;
+  pointer-events: none;
+  z-index: 10;
+}
+.hud-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd166;
+}
+.hud-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+}
+.hud-status {
+  margin-left: auto;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+}
+.dot.online {
+  background: #6fcf97;
+}
+.dot.connecting {
+  background: #f2c94c;
+}
+.dot.offline {
+  background: #eb5757;
+}
+
+/* ---------- 聊天 ---------- */
+.chat-panel {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 320px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+.chat-messages {
+  height: 160px;
+  overflow-y: auto;
+  background: rgba(20, 16, 10, 0.75);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #f5e9c8;
+}
+.chat-msg {
+  margin-bottom: 3px;
+  word-break: break-all;
+}
+.chat-name {
+  color: #ffd166;
+}
+.chat-system {
+  color: #9fd8a0;
+  font-style: italic;
+}
+.chat-input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #4a3f2a;
+  background: rgba(20, 16, 10, 0.85);
+  color: #f5e9c8;
+  outline: none;
+}
+
+/* ---------- 遮罩 ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 10, 8, 0.82);
+  z-index: 20;
+}
+.overlay-card {
+  width: 340px;
+  padding: 28px 24px;
+  background: #241d12;
+  border: 1px solid #4a3f2a;
+  border-radius: 10px;
+  text-align: center;
+  color: #f5e9c8;
+}
+.overlay-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+.overlay-card h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #ffd166;
+}
+.overlay-card p {
+  font-size: 13px;
+  color: #cbb98a;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.overlay-status {
+  margin-top: 12px;
+  color: #888 !important;
+}
+.spinner {
+  width: 28px;
+  height: 28px;
+  margin: 14px auto 0;
+  border: 3px solid #4a3f2a;
+  border-top-color: #ffd166;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.login-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid #4a3f2a;
+  background: #1a150c;
+  color: #f5e9c8;
+  outline: none;
+  font-size: 14px;
+}
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #b8860b;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: #d09a1a;
+}
+.login-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #8a7f6a;
+}

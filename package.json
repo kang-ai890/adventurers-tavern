@@ -1,0 +1,27 @@
+{
+  "name": "adventurers-tavern",
+  "version": "0.1.0",
+  "private": true,
+  "description": "《冒险者酒馆》Adventurer's Tavern —— 东方修仙题材多人在线经营游戏",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run build -w @tavern/server && npm run build -w @tavern/web && npm run build -w @tavern/admin",
+    "typecheck": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run typecheck -w @tavern/server && npm run typecheck -w @tavern/web && npm run typecheck -w @tavern/admin",
+    "dev:server": "npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run dev -w @tavern/server",
+    "dev:web": "npm run dev -w @tavern/web",
+    "dev:admin": "npm run dev -w @tavern/admin",
+    "db:generate": "npm run db:generate -w @tavern/database",
+    "db:migrate": "npm run db:migrate -w @tavern/database",
+    "db:deploy": "npm run db:deploy -w @tavern/database",
+    "db:studio": "npm run db:studio -w @tavern/database"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

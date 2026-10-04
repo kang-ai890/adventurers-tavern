@@ -1,0 +1,20 @@
+# Render Blueprint —— 在 Render 控制台选择 "Blueprint" 导入本仓库即可
+services:
+  - type: web
+    name: adventurers-tavern-server
+    runtime: node
+    plan: free
+    buildCommand: "npm ci && npm run build -w @tavern/shared && npm run build -w @tavern/database && npm run build -w @tavern/server"
+    startCommand: "npm run start -w @tavern/server"
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+        value: "postgresql://user:password@host/db"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"

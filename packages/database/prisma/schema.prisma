@@ -1,0 +1,182 @@
+// 《冒险者酒馆》数据库 Schema（骨架版）
+// 完整 50+ 表设计见设计文档；随开发阶段逐步迁移新增。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum AdminRole {
+  SUPER
+  OPERATOR
+}
+
+enum AnnouncementType {
+  BANNER
+  SYSTEM
+  MAIL
+}
+
+// ---------- 账号 ----------
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  username     String?    @unique
+  passwordHash String?
+  isGuest      Boolean    @default(true)
+  deviceToken  String?    @unique
+  status       UserStatus @default(ACTIVE)
+  bannedUntil  DateTime?
+  createdAt    DateTime   @default(now())
+  lastLoginAt  DateTime?
+
+  player Player?
+
+  @@index([status])
+}
+
+// ---------- 玩家 ----------
+
+model Player {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @db.Uuid
+  nickname        String
+  avatar          String   @default("default")
+  level           Int      @default(1)
+  exp             Int      @default(0)
+  realm           String   @default("炼气") // 境界：炼气→渡劫
+  stones          Int      @default(0) // 灵石
+  jades           Int      @default(0) // 仙玉
+  energy          Int      @default(100) // 体力
+  energyUpdatedAt DateTime @default(now())
+  killScore       Int      @default(0) // 杀孽值，>0 为红名
+  fame            Int      @default(0) // 口碑
+  beautyScore     Int      @default(0) // 领地美观度
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  farmPlots     FarmPlot[]
+  buildings     Building[]
+  inventory     PlayerInventory[]
+  announcements Announcement[]
+
+  @@index([level])
+  @@index([realm])
+}
+
+// ---------- 领地 ----------
+
+model FarmPlot {
+  id         String    @id @default(uuid()) @db.Uuid
+  playerId   String    @db.Uuid
+  plotIndex  Int
+  cropId     String?
+  plantedAt  DateTime?
+  readyAt    DateTime?
+  wateredBy  String[]  @default([]) // 帮忙浇水的好友 id
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, plotIndex])
+}
+
+model Building {
+  id       String @id @default(uuid()) @db.Uuid
+  playerId String @db.Uuid
+  type     String // tavern / kitchen / cellar / inn / treasure
+  level    Int    @default(1)
+  x        Int
+  y        Int
+
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([playerId, type])
+}
+
+// ---------- 物品 ----------
+
+model ItemDef {
+  id          String @id // slug，如 "spirit_rice"
+  name        String
+  type        String // crop / material / dish / wine / pill / equip / pet / fashion
+  rarity      String @default("common") // common/uncommon/rare/epic/legendary
+  basePrice   Int    @default(0) // 灵石
+  icon        String @default("default")
+  description String @default("")
+
+  inventory PlayerInventory[]
+}
+
+model PlayerInventory {
+  id       String @id @default(uuid()) @db.Uuid
+  playerId String @db.Uuid
+  itemId   String
+  quantity Int    @default(0)
+
+  player Player  @relation(fields: [playerId], references: [id])
+  item   ItemDef @relation(fields: [itemId], references: [id])
+
+  @@unique([playerId, itemId])
+}
+
+// ---------- 配置与运营 ----------
+
+model GameConfig {
+  key         String    @id
+  value       Json
+  description String    @default("")
+  updatedBy   String?   @db.Uuid
+  updatedAt   DateTime  @updatedAt
+}
+
+model Announcement {
+  id          String           @id @default(uuid()) @db.Uuid
+  title       String
+  content     String
+  type        AnnouncementType @default(SYSTEM)
+  enabled     Boolean          @default(true)
+  createdBy   String?          @db.Uuid
+  createdAt   DateTime         @default(now())
+  publishedAt DateTime?
+
+  player Player? @relation(fields: [createdBy], references: [id])
+}
+
+// ---------- 管理后台 ----------
+
+model AdminUser {
+  id           String    @id @default(uuid()) @db.Uuid
+  username     String    @unique
+  passwordHash String
+  role         AdminRole @default(OPERATOR)
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  logs AdminLog[]
+}
+
+model AdminLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String   @db.Uuid
+  action     String // user.ban / config.update / announcement.publish ...
+  targetType String   @default("")
+  targetId   String   @default("")
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  admin AdminUser @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([createdAt])
+}
